@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一筆畫大挑戰 - 100關歐拉路徑互動教學</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            overscroll-behavior: none;
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.85); opacity: 0.8; }
+            50% { transform: scale(1.25); opacity: 0.3; }
+            100% { transform: scale(0.85); opacity: 0.8; }
+        }
+        .btn-bounce:active {
+            transform: scale(0.96);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-30 px-3 py-2.5 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <!-- 標題與徽章 -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-bezier-curve text-xl text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-black tracking-wide bg-gradient-to-r from-indigo-300 via-sky-200 to-emerald-300 bg-clip-text text-transparent">
+                            一筆畫大挑戰
+                        </h1>
+                        <span id="difficulty-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            初階入門
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">歐拉路徑（Eulerian Path）100關由淺入深圖論幾何訓練</p>
+                </div>
+            </div>
+
+            <!-- 進度與操作按鈕 -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+                    <span class="text-xs text-slate-400">已通關:</span>
+                    <span id="progress-text" class="text-sm font-black text-emerald-400">0 / 100</span>
+                </div>
+
+                <button id="btn-levels" class="btn-bounce bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs sm:text-sm font-bold px-3 py-2 rounded-xl border border-slate-600 flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-table-cells text-sky-400"></i>
+                    <span>關卡列表</span>
+                </button>
+
+                <button id="btn-theory" class="btn-bounce bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span class="hidden md:inline">一筆畫數學教室</span>
+                    <span class="md:hidden">原理</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        
+        <!-- 左側/中央：畫布與關卡標題 (佔 7 欄) -->
+        <section class="lg:col-span-7 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <!-- 畫布頂部狀態欄 -->
+            <div class="bg-slate-800/80 border-b border-slate-700 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span id="level-number-badge" class="bg-indigo-600 text-white text-xs sm:text-sm font-black px-2.5 py-1 rounded-lg shadow">
+                        第 1 / 100 題
+                    </span>
+                    <h2 id="level-title" class="text-base sm:text-lg font-bold text-white truncate">
+                        載入中...
+                    </h2>
+                </div>
+
+                <!-- 教學輔助開關：顯示度數 -->
+                <div class="flex items-center gap-3">
+                    <label for="toggle-degree" class="flex items-center gap-2 cursor-pointer text-xs sm:text-sm text-slate-300 hover:text-white bg-slate-900/70 px-3 py-1.5 rounded-xl border border-slate-700 transition">
+                        <input type="checkbox" id="toggle-degree" class="sr-only peer">
+                        <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:Bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:top-0.5 after:left-0.5 after:bg-white after:transition-all relative peer-checked:bg-emerald-500"></div>
+                        <span>顯示頂點度數(奇偶點)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 圖形統計資訊小列 -->
+            <div class="bg-slate-900/60 px-4 py-2 border-b border-slate-700/60 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+                <div class="flex items-center gap-4">
+                    <span><i class="fa-solid fa-circle-nodes text-sky-400 mr-1"></i>頂點數：<strong id="stat-vertices" class="text-slate-200">0</strong></span>
+                    <span><i class="fa-solid fa-bezier-curve text-indigo-400 mr-1"></i>總線段：<strong id="stat-edges" class="text-slate-200">0</strong></span>
+                    <span id="odd-count-badge" class="hidden"><i class="fa-solid fa-star-of-life text-rose-400 mr-1"></i>奇數點：<strong id="stat-odd" class="text-rose-300">0</strong> 個</span>
+                </div>
+                <div id="draw-progress-container" class="flex items-center gap-2">
+                    <span>已畫線段：</span>
+                    <span id="edge-progress-badge" class="px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-bold border border-slate-700">0 / 0</span>
+                </div>
+            </div>
+
+            <!-- 互動 Canvas 畫布容器 -->
+            <div class="relative w-full aspect-square max-h-[480px] bg-slate-950 flex items-center justify-center overflow-hidden">
+                <!-- 背景裝飾格線 -->
+                <div class="absolute inset-0 opacity-15 pointer-events-none" 
+                     style="background-image: radial-gradient(#64748b 1px, transparent 1px); background-size: 24px 24px;"></div>
+                
+                <canvas id="game-canvas" class="w-full h-full block cursor-pointer z-10"></canvas>
+
+                <!-- 第一階段遮罩提示角標 -->
+                <div id="phase1-overlay-badge" class="absolute top-3 left-3 z-20 pointer-events-none bg-amber-500/20 border border-amber-400/40 backdrop-blur-sm text-amber-200 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg">
+                    <i class="fa-solid fa-magnifying-glass-chart text-amber-400"></i>
+                    <span>第一階段：請先觀察圖形，判斷可否一筆畫</span>
+                </div>
+
+                <!-- 第二階段操作提示角標 -->
+                <div id="phase2-overlay-badge" class="hidden absolute top-3 left-3 z-20 pointer-events-none bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-sm text-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg">
+                    <i class="fa-solid fa-pen-nib text-emerald-400"></i>
+                    <span>第二階段：請點擊或拖曳頂點，依線一筆畫出圖案</span>
+                </div>
+            </div>
+
+            <!-- 畫布底部圖例說明 -->
+            <div class="bg-slate-800 px-4 py-2.5 border-t border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-slate-300 inline-block border border-slate-500"></span>偶數點 (雙數線)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-rose-500 inline-block border border-rose-300"></span>奇數點 (單數線)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-amber-400 inline-block ring-2 ring-amber-400/40"></span>目前筆尖位置
+                    </span>
+                </div>
+                <span class="text-slate-400"><i class="fa-solid fa-hand-pointer mr-1"></i>支援滑鼠拖曳、點擊相鄰點或觸控滑動</span>
+            </div>
+        </section>
+
+        <!-- 右側：兩階段作答控制台與解析面板 (佔 5 欄) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- 步驟指示器 -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">闖關流程</span>
+                    <span id="level-cleared-tag" class="hidden text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                        <i class="fa-solid fa-check-double mr-1"></i>本關已通過
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div id="step-indicator-1" class="p-3 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 flex items-center gap-2.5 transition">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-500 text-white font-black text-xs flex items-center justify-center shrink-0">1</div>
+                        <div>
+                            <div class="text-xs font-bold text-white">第一階段：判斷</div>
+                            <div class="text-[11px] text-indigo-300">可否一筆畫完？</div>
+                        </div>
+                    </div>
+                    <div id="step-indicator-2" class="p-3 rounded-xl border-2 border-slate-700 bg-slate-900/50 opacity-60 flex items-center gap-2.5 transition">
+                        <div class="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 font-black text-xs flex items-center justify-center shrink-0">2</div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-200">第二階段：實作</div>
+                            <div class="text-[11px] text-slate-400">依線畫出圖案</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 階段一：判斷按鈕區塊 -->
+            <div id="panel-phase1" class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-circle-question text-amber-400"></i>
+                        <span>請問左方的圖形「可以一筆畫」完成嗎？</span>
+                    </h3>
+                    <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                        規則：筆尖不離開紙面，每一條線段都必須剛好走過一次，且<strong>不可重複走同一條線</strong>。
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-judge-yes" class="btn-bounce group bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black py-4 px-4 rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-400/40 flex flex-col items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-circle-check text-2xl group-hover:scale-110 transition"></i>
+                        <span class="text-base">可以一筆畫</span>
+                        <span class="text-[11px] font-normal text-emerald-100">答對後開始連線</span>
+                    </button>
+
+                    <button id="btn-judge-no" class="btn-bounce group bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white font-black py-4 px-4 rounded-2xl shadow-lg shadow-rose-600/25 border border-rose-400/40 flex flex-col items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-circle-xmark text-2xl group-hover:scale-110 transition"></i>
+                        <span class="text-base">不可以一筆畫</span>
+                        <span class="text-[11px] font-normal text-rose-100">奇數點過多無法完成</span>
+                    </button>
+                </div>
+
+                <button id="btn-hint-phase1" class="text-xs text-indigo-300 hover:text-indigo-200 underline self-start flex items-center gap-1">
+                    <i class="fa-regular fa-lightbulb"></i> 不確定怎麼判斷？點此開啟頂點度數提示
+                </button>
+            </div>
+
+            <!-- 階段二：一筆畫實作控制區塊 -->
+            <div id="panel-phase2" class="hidden bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-bold text-emerald-300 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-fancy"></i>
+                            <span>判斷正確！請依線一筆畫出整個圖案</span>
+                        </h3>
+                        <p id="phase2-tip-text" class="text-xs text-slate-300 mt-1 leading-relaxed">
+                            請在畫布上點擊任一頂點作為<strong>起點</strong>，接著拖曳或依序點擊相連的頂點把所有線段走完。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 實作控制按鈕 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-undo-step" class="btn-bounce bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:pointer-events-none text-white font-bold py-2.5 px-4 rounded-xl border border-slate-600 flex items-center justify-center gap-2 text-sm transition">
+                        <i class="fa-solid fa-rotate-left text-amber-400"></i>
+                        <span>退回上一步</span>
+                    </button>
+
+                    <button id="btn-reset-draw" class="btn-bounce bg-amber-600/90 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl border border-amber-400/30 flex items-center justify-center gap-2 text-sm transition shadow">
+                        <i class="fa-solid fa-broom"></i>
+                        <span>重畫 / 重置本題</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 回饋與數學解析面板 -->
+            <div id="feedback-box" class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 shadow-lg transition-all">
+                <div class="flex items-start gap-3">
+                    <div id="feedback-icon" class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 text-lg mt-0.5">
+                        <i class="fa-solid fa-compass-drafting"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 id="feedback-title" class="text-sm font-bold text-white">關卡任務說明</h4>
+                        <div id="feedback-message" class="text-xs text-slate-300 mt-1 leading-relaxed space-y-1">
+                            請先觀察圖形中的每個交匯點（頂點）連接了幾條線，再點擊上方按鈕判斷是否能一筆畫完成。
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 上一題 / 下一題 導覽列 (嚴格禁止跳過未完成關卡) -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3">
+                <button id="btn-prev-level" class="btn-bounce bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:pointer-events-none text-slate-200 font-bold py-3 px-4 rounded-xl flex items-center gap-2 text-sm transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>上一題</span>
+                </button>
+
+                <div class="text-center flex-1">
+                    <div id="lock-status-text" class="text-xs text-amber-400 font-medium flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>完成本題後解鎖下一題</span>
+                    </div>
+                </div>
+
+                <button id="btn-next-level" disabled class="btn-bounce bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:opacity-50 disabled:pointer-events-none text-white font-black py-3 px-5 rounded-xl flex items-center gap-2 text-sm transition shadow-lg">
+                    <span>下一題</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 頁尾資訊 -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 px-4 text-center text-xs text-slate-500">
+        一筆畫大挑戰（Eulerian Path 100 Levels） • 嚴格闖關模式（不可跳題，自動記錄學習進度）
+    </footer>
+
+    <!-- 彈窗 1：100關卡選擇器（不可跳過未解鎖題目） -->
+    <div id="modal-levels" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-table-cells text-sky-400 text-lg"></i>
+                    <h3 class="text-lg font-black text-white">100 關卡挑戰進度表</h3>
+                </div>
+                <button id="btn-close-levels" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="px-5 py-2.5 bg-slate-900/80 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-600 inline-block"></span>已通關（可隨時複習）</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span>目前挑戰關卡</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-700 inline-block"></span>尚未解鎖（禁止跳題）</span>
+                </div>
+                <span class="text-amber-300 font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>必須依序過關才可解鎖後續題目</span>
+            </div>
+
+            <!-- 100關網格 -->
+            <div id="levels-grid" class="p-5 overflow-y-auto grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+                <!-- 由 JS 動態生成 1~100 按鈕 -->
+            </div>
+
+            <div class="px-5 py-3 border-t border-slate-700 bg-slate-900/50 flex items-center justify-between">
+                <button id="btn-reset-all-progress" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 重置所有闖關進度
+                </button>
+                <button id="btn-close-levels-bottom" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                    關閉視窗
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈窗 2：一筆畫數學原理小教室 -->
+    <div id="modal-theory" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between bg-gradient-to-r from-indigo-900/60 to-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-graduation-cap text-indigo-400 text-xl"></i>
+                    <h3 class="text-lg font-black text-white">一筆畫數學原理小教室（歐拉一筆畫定理）</h3>
+                </div>
+                <button id="btn-close-theory" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-sm text-slate-200 leading-relaxed">
+                <div class="bg-indigo-950/50 border border-indigo-500/30 rounded-xl p-4">
+                    <h4 class="font-bold text-indigo-300 text-base mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-bridge"></i> 什麼是一筆畫問題？
+                    </h4>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                        西元1736年，大數學家<strong>歐拉（Leonhard Euler）</strong>研究了著名的「哥尼斯堡七橋問題」，開創了圖論（Graph Theory）。他發現一個連通圖形能不能「不重複、不中斷地一筆畫完」，完全取決於圖形中<strong>奇數點（奇點）</strong>的數量！
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 font-bold text-sky-300 mb-1">
+                            <span class="w-3.5 h-3.5 rounded-full bg-slate-200 inline-block"></span>
+                            <span>偶數點（偶點 Even Vertex）</span>
+                        </div>
+                        <p class="text-xs text-slate-300">
+                            連接<strong>雙數條線（2、4、6、8...條）</strong>的交匯點。因為有「一進一出」配對，所以筆尖經過偶數點時，進得來就一定出得去！
+                        </p>
+                    </div>
+                    <div class="bg-slate-900/80 border border-rose-500/30 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 font-bold text-rose-400 mb-1">
+                            <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block"></span>
+                            <span>奇數點（奇點 Odd Vertex）</span>
+                        </div>
+                        <p class="text-xs text-slate-300">
+                            連接<strong>單數條線（1、3、5、7...條）</strong>的交匯點。扣除一進一出的配對後，會多出一條線，因此奇數點只能當作<strong>「起點」</strong>或<strong>「終點」</strong>！
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-amber-300 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-key"></i> 必勝判斷三大口訣：
+                    </h4>
+                    <div class="space-y-2 text-xs sm:text-sm">
+                        <div class="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-start gap-2.5">
+                            <span class="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded text-xs shrink-0 mt-0.5">情況 1</span>
+                            <div>
+                                <strong class="text-emerald-300">奇數點 = 0 個（全都是偶數點）：可以一筆畫！</strong>
+                                <p class="text-slate-300 text-xs mt-0.5">從<strong>任何一個點</strong>出發都可以一筆畫完，而且最後會剛好回到起點（稱為歐拉迴路）。</p>
+                            </div>
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-sky-950/40 border border-sky-500/30 flex items-start gap-2.5">
+                            <span class="bg-sky-400 text-slate-950 font-black px-2 py-0.5 rounded text-xs shrink-0 mt-0.5">情況 2</span>
+                            <div>
+                                <strong class="text-sky-300">奇數點 = 2 個：可以一筆畫！</strong>
+                                <p class="text-slate-300 text-xs mt-0.5">必須從<strong>其中一個奇數點作為起點</strong>出發，最後一定會在<strong>另一個奇數點結束</strong>（稱為歐拉路徑）。如果從偶數點出發會卡死喔！</p>
+                            </div>
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-rose-950/40 border border-rose-500/30 flex items-start gap-2.5">
+                            <span class="bg-rose-500 text-white font-black px-2 py-0.5 rounded text-xs shrink-0 mt-0.5">情況 3</span>
+                            <div>
+                                <strong class="text-rose-300">奇數點 > 2 個（例如 4、6、8 個）：絕對不可以一筆畫！</strong>
+                                <p class="text-slate-300 text-xs mt-0.5">因為一筆畫最多只有 1 個起點和 1 個終點，超過 2 個奇數點就一定無法一筆畫完成（例如「田」字有 4 個奇點，無法一筆畫）。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-5 py-3 border-t border-slate-700 bg-slate-900/50 flex justify-end">
+                <button id="btn-close-theory-bottom" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold px-5 py-2 rounded-xl">
+                    我學會了，返回挑戰！
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈窗 3：重置進度確認框 (避免使用原生 confirm) -->
+    <div id="modal-confirm-reset" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center gap-3 text-rose-400">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h4 class="text-base font-bold text-white">確定要重置所有闖關紀錄嗎？</h4>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                重置後，您的過關進度將歸零並回到第 1 題重新開始挑戰。
+            </p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-cancel-reset" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-4 py-2 rounded-xl">
+                    取消
+                </button>
+                <button id="btn-confirm-reset" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                    確定重置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /***********************************************************************
+         * 一筆畫大挑戰 (100關由淺入深圖論幾何題庫與互動引擎)
+         ***********************************************************************/
+
+        // ==================== 1. 幾何輔助生成函數 ====================
+        // 產生正多邊形頂點 (cx, cy 為中心，r 為半徑，n 為頂點數)
+        function regularPolygonVertices(n, cx = 50, cy = 50, r = 38, rotDeg = -90) {
+            const pts = [];
+            for (let i = 0; i < n; i++) {
+                const rad = (rotDeg + (i * 360) / n) * (Math.PI / 180);
+                pts.push([
+                    Number((cx + r * Math.cos(rad)).toFixed(2)),
+                    Number((cy + r * Math.sin(rad)).toFixed(2))
+                ]);
+            }
+            return pts;
+        }
+
+        // 產生同心雙層多邊形頂點 (外圈 0..n-1, 內圈 n..2n-1, 若 hasCenter 則中心為 2n)
+        function concentricPolygonVertices(n, rOut = 40, rIn = 20, rotOut = -90, rotIn = -90, hasCenter = false) {
+            const outPts = regularPolygonVertices(n, 50, 50, rOut, rotOut);
+            const inPts = regularPolygonVertices(n, 50, 50, rIn, rotIn);
+            const all = [...outPts, ...inPts];
+            if (hasCenter) all.push([50, 50]);
+            return all;
+        }
+
+        // 產生 rows x cols 網格頂點與基礎格線
+        function createGridStructure(rows, cols, padX = 16, padY = 16) {
+            const v = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = cols === 1 ? 50 : padX + (c * (100 - 2 * padX)) / (cols - 1);
+                    const y = rows === 1 ? 50 : padY + (r * (100 - 2 * padY)) / (rows - 1);
+                    v.push([Number(x.toFixed(2)), Number(y.toFixed(2))]);
+                }
+            }
+            const e = [];
+            const id = (r, c) => r * cols + c;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (c + 1 < cols) e.push([id(r, c), id(r, c + 1)]);
+                    if (r + 1 < rows) e.push([id(r, c), id(r + 1, c)]);
+                }
+            }
+            return { v, e, id };
+        }
+
+        // 計算點 (px, py) 到線段 (x1, y1)-(x2, y2) 的距離與投影位置
+        function pointToSegmentInfo(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return { dist: Math.hypot(px - x1, py - y1), t: 0 };
+            const t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+            const clampedT = Math.max(0, Math.min(1, t));
+            const projX = x1 + clampedT * dx;
+            const projY = y1 + clampedT * dy;
+            return {
+                dist: Math.hypot(px - projX, py - projY),
+                t: t
+            };
+        }
+
+        // 為題目的每一條邊計算「自動防重疊彎曲弧度 (curve)」，確保共線或平行重邊清晰可見
+        function assignSmartEdgeCurves(vertices, rawEdges) {
+            // 先紀錄平行邊 (Multigraphs)
+            const pairBuckets = new Map();
+            const edges = rawEdges.map((item, idx) => {
+                const u = item[0];
+                const v = item[1];
+                const manualCurve = item[2];
+                const key = Math.min(u, v) + '-' + Math.max(u, v);
+                if (!pairBuckets.has(key)) pairBuckets.set(key, []);
+                pairBuckets.get(key).push(idx);
+                return { u, v, curve: manualCurve !== undefined ? manualCurve : null };
+            });
+
+            // 處理平行邊 (如七橋問題)
+            pairBuckets.forEach((indices) => {
+                if (indices.length > 1) {
+                    const count = indices.length;
+                    indices.forEach((edgeIdx, k) => {
+                        if (edges[edgeIdx].curve === null) {
+                            const offset = (k - (count - 1) / 2) * 0.42;
+                            const [u, v] = [edges[edgeIdx].u, edges[edgeIdx].v];
+                            edges[edgeIdx].curve = u < v ? offset : -offset;
+                        }
+                    });
+                }
+            });
+
+            // 檢查每一條直線邊是否剛好穿過其他頂點（避免長對角線或跳點邊蓋住中間頂點）
+            edges.forEach((edge) => {
+                if (edge.curve !== null) return;
+                const [x1, y1] = vertices[edge.u];
+                const [x2, y2] = vertices[edge.v];
+                let hitIntermediateVertex = false;
+
+                for (let i = 0; i < vertices.length; i++) {
+                    if (i === edge.u || i === edge.v) continue;
+                    const [px, py] = vertices[i];
+                    const info = pointToSegmentInfo(px, py, x1, y1, x2, y2);
+                    if (info.t > 0.08 && info.t < 0.92 && info.dist < 2.2) {
+                        hitIntermediateVertex = true;
+                        break;
+                    }
+                }
+
+                if (hitIntermediateVertex) {
+                    // 根據與中心點 (50,50) 的相對方向決定向外微彎
+                    const mx = (x1 + x2) / 2;
+                    const my = (y1 + y2) / 2;
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    const nx = -dy;
+                    const ny = dx;
+                    const dot = nx * (mx - 50) + ny * (my - 50);
+                    edge.curve = dot >= 0 ? 0.26 : -0.26;
+                } else {
+                    edge.curve = 0;
+                }
+            });
+
+            return edges;
+        }
+
+        // ==================== 2. 建立 100 道由淺入深的題庫 ====================
+        function buildAll100Levels() {
+            const levels = [];
+
+            function addLevel(name, difficulty, vertices, edges) {
+                // 計算每個頂點的度數 (Degree)
+                const degrees = new Array(vertices.length).fill(0);
+                edges.forEach(e => {
+                    degrees[e[0]]++;
+                    degrees[e[1]]++;
+                });
+                const oddVertices = [];
+                degrees.forEach((deg, idx) => {
+                    if (deg % 2 === 1) oddVertices.push(idx);
+                });
+                const oddCount = oddVertices.length;
+                const canDraw = (oddCount === 0 || oddCount === 2);
+
+                levels.push({
+                    id: levels.length + 1,
+                    name,
+                    difficulty,
+                    vertices,
+                    edges: assignSmartEdgeCurves(vertices, edges),
+                    degrees,
+                    oddVertices,
+                    oddCount,
+                    canDraw
+                });
+            }
+
+            // -----------------------------------------------------------------
+            // 【第 1 ~ 20 題：初階入門（基礎幾何、日字、田字、五角星、簡易房屋）】
+            // -----------------------------------------------------------------
+            // 1. 正三角形 (0奇點 - 可)
+            addLevel('基礎正三角形', '初階入門',
+                [[50, 16], [18, 80], [82, 80]],
+                [[0, 1], [1, 2], [2, 0]]
+            );
+            // 2. 正方形 (0奇點 - 可)
+            addLevel('基礎正方形', '初階入門',
+                [[22, 22], [78, 22], [78, 78], [22, 78]],
+                [[0, 1], [1, 2], [2, 3], [3, 0]]
+            );
+            // 3. 對角線正方形 / 日字斜變體 (2奇點 - 可)
+            addLevel('斜線正方形', '初階入門',
+                [[22, 22], [78, 22], [78, 78], [22, 78]],
+                [[0, 1], [1, 2], [2, 3], [3, 0], [0, 2]]
+            );
+            // 4. 十字路口 (4奇點 - 不可)
+            addLevel('十字路口', '初階入門',
+                [[50, 50], [50, 15], [50, 85], [15, 50], [85, 50]],
+                [[0, 1], [0, 2], [0, 3], [0, 4]]
+            );
+            // 5. 蝴蝶領結 (0奇點 - 可)
+            addLevel('蝴蝶領結', '初階入門',
+                [[50, 50], [18, 22], [18, 78], [82, 22], [82, 78]],
+                [[0, 1], [1, 2], [2, 0], [0, 3], [3, 4], [4, 0]]
+            );
+            // 6. 經典「日」字形 (2奇點 - 可)
+            addLevel('經典「日」字', '初階入門',
+                [[26, 16], [74, 16], [26, 50], [74, 50], [26, 84], [74, 84]],
+                [[0, 1], [0, 2], [1, 3], [2, 3], [2, 4], [3, 5], [4, 5]]
+            );
+            // 7. 雙斜線信封框 (4奇點 - 不可)
+            addLevel('雙對角線方框', '初階入門',
+                [[22, 22], [78, 22], [78, 78], [22, 78], [50, 50]],
+                [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [4, 2], [1, 4], [4, 3]]
+            );
+            // 8. 傳統小房屋 (2奇點 - 可)
+            addLevel('溫馨小房屋', '初階入門',
+                [[50, 14], [22, 42], [78, 42], [22, 84], [78, 84]],
+                [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4]]
+            );
+            // 9. 單斜樑小房屋 (2奇點 - 可)
+            addLevel('加固小房屋', '初階入門',
+                [[50, 14], [22, 42], [78, 42], [22, 84], [78, 84]],
+                [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4], [1, 4]]
+            );
+            // 10. 經典一筆畫信封屋 (2奇點 - 可)
+            addLevel('經典開口信封屋', '初階入門',
+                [[50, 14], [22, 42], [78, 42], [22, 84], [78, 84], [50, 63]],
+                [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4], [1, 5], [5, 4], [2, 5], [5, 3]]
+            );
+            // 11. 雙斜線無頂方塊 (2奇點 - 可)
+            addLevel('開口交叉盒', '初階入門',
+                [[22, 24], [78, 24], [78, 80], [22, 80], [50, 52]],
+                [[1, 2], [2, 3], [3, 0], [0, 4], [4, 2], [1, 4], [4, 3]]
+            );
+            // 12. 經典「田」字形 (4奇點 - 不可)
+            const g12 = createGridStructure(3, 3, 20, 20);
+            addLevel('經典「田」字格', '初階入門', g12.v, g12.e);
+
+            // 13. 菱形鑲嵌方框 (0奇點 - 可)
+            addLevel('寶石鑲嵌框', '初階入門',
+                [[20, 20], [80, 20], [80, 80], [20, 80], [50, 20], [80, 50], [50, 80], [20, 50]],
+                [[0, 4], [4, 1], [1, 5], [5, 2], [2, 6], [6, 3], [3, 7], [7, 0], [4, 5], [5, 6], [6, 7], [7, 4]]
+            );
+            // 14. 經典五角星 (0奇點 - 可)
+            const star5 = regularPolygonVertices(5, 50, 52, 40, -90);
+            addLevel('一筆五角星', '初階入門', star5,
+                [[0, 2], [2, 4], [4, 1], [1, 3], [3, 0]]
+            );
+            // 15. 外框五角星 (0奇點 - 可)
+            addLevel('魔法五芒星陣', '初階入門', star5,
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2], [2, 4], [4, 1], [1, 3], [3, 0]]
+            );
+            // 16. 單柄棒棒糖 (2奇點 - 可)
+            addLevel('三角棒棒糖', '初階入門',
+                [[50, 16], [26, 52], [74, 52], [50, 86]],
+                [[0, 1], [0, 2], [1, 2], [1, 3]]
+            );
+            // 17. 三葉風車 (0奇點 - 可)
+            addLevel('三葉幸運風車', '初階入門',
+                [[50, 52], [35, 16], [65, 16], [86, 62], [68, 86], [14, 62], [32, 86]],
+                [[0, 1], [1, 2], [2, 0], [0, 3], [3, 4], [4, 0], [0, 5], [5, 6], [6, 0]]
+            );
+            // 18. 立方體骨架投影 (8奇點 - 不可)
+            addLevel('立體方塊骨架', '初階入門',
+                ...(() => {
+                    const v = concentricPolygonVertices(4, 42, 20, -45, -45, false);
+                    const e = [
+                        [0, 1], [1, 2], [2, 3], [3, 0],
+                        [4, 5], [5, 6], [6, 7], [7, 4],
+                        [0, 4], [1, 5], [2, 6], [3, 7]
+                    ];
+                    return [v, e];
+                })()
+            );
+            // 19. 快樂小魚 (2奇點 - 可)
+            addLevel('悠游小魚', '初階入門',
+                [[14, 50], [42, 22], [42, 78], [68, 50], [88, 26], [88, 74]],
+                [[0, 1], [0, 2], [1, 2], [1, 3], [2, 3], [3, 4], [3, 5], [4, 5]]
+            );
+            // 20. 雙耳獎盃 (2奇點 - 可)
+            addLevel('榮耀雙耳盃', '初階入門',
+                [[30, 24], [70, 24], [30, 68], [70, 68], [12, 46], [88, 46]],
+                [[0, 1], [0, 2], [1, 3], [2, 3], [0, 4], [4, 2], [1, 5], [5, 3], [0, 3]]
+            );
+
+            // -----------------------------------------------------------------
+            // 【第 21 ~ 45 題：進階挑戰（多邊形輻條、橋樑問題、複合幾何）】
+            // -----------------------------------------------------------------
+            // 21. 四輪輻正方形 = K4 完全圖 (4奇點 - 不可)
+            addLevel('四輪輻車輪 (K4)', '進階挑戰',
+                [[50, 50], [50, 14], [86, 50], [50, 86], [14, 50]],
+                [[1, 2], [2, 3], [3, 4], [4, 1], [0, 1], [0, 2], [0, 3], [0, 4]]
+            );
+            // 22. 五輪輻車輪 W5 (6奇點 - 不可)
+            addLevel('五輪輻車輪', '進階挑戰',
+                [[50, 50], ...regularPolygonVertices(5, 50, 50, 38, -90)],
+                [[1, 2], [2, 3], [3, 4], [4, 5], [5, 1], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]]
+            );
+            // 23. 六輪輻車輪 W6 (6奇點 - 不可)
+            addLevel('六輪輻車輪', '進階挑戰',
+                [[50, 50], ...regularPolygonVertices(6, 50, 50, 38, -90)],
+                [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]]
+            );
+            // 24. 雙弦六邊形 (2奇點 - 可)
+            addLevel('雙弦六角盾', '進階挑戰',
+                regularPolygonVertices(6, 50, 50, 38, -90),
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [0, 2], [2, 4], [4, 0], [1, 4]]
+            );
+            // 25. 大衛六角星外框 (0奇點 - 可)
+            addLevel('六芒星能量陣', '進階挑戰',
+                regularPolygonVertices(6, 50, 50, 38, -90),
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
+                 [0, 2], [2, 4], [4, 0], [1, 3], [3, 5], [5, 1]]
+            );
+            // 26. 哥尼斯堡七橋問題 (4奇點 - 不可)
+            addLevel('哥尼斯堡七橋問題', '進階挑戰',
+                [[50, 16], [50, 50], [50, 84], [84, 50]],
+                [
+                    [0, 1, -0.35], [0, 1, 0.35],
+                    [1, 2, -0.35], [1, 2, 0.35],
+                    [0, 3, 0], [1, 3, 0], [2, 3, 0]
+                ]
+            );
+            // 27. 八橋改善工程 (在七橋基礎上加一座橋 -> 2奇點 - 可)
+            addLevel('哥尼斯堡八橋新解', '進階挑戰',
+                [[50, 16], [50, 50], [50, 84], [84, 50]],
+                [
+                    [0, 1, -0.35], [0, 1, 0.35],
+                    [1, 2, -0.35], [1, 2, 0.35],
+                    [0, 3, 0], [1, 3, 0], [2, 3, 0],
+                    [0, 2, -0.65]
+                ]
+            );
+            // 28. 九橋雙島迴路 (0奇點 - 可)
+            addLevel('雙島九橋迴路', '進階挑戰',
+                [[50, 16], [50, 50], [50, 84], [84, 50]],
+                [
+                    [0, 1, -0.35], [0, 1, 0.35],
+                    [1, 2, -0.35], [1, 2, 0.35],
+                    [0, 3, 0], [1, 3, -0.28], [1, 3, 0.28], [2, 3, 0],
+                    [0, 2, -0.65]
+                ]
+            );
+            // 29. 四葉幸運草 (0奇點 - 可)
+            addLevel('四葉幸運草', '進階挑戰',
+                [[50, 50], [36, 16], [64, 16], [84, 36], [84, 64], [64, 84], [36, 84], [16, 64], [16, 36]],
+                [[0, 1], [1, 2], [2, 0], [0, 3], [3, 4], [4, 0], [0, 5], [5, 6], [6, 0], [0, 7], [7, 8], [8, 0]]
+            );
+            // 30. 三聯排屋 (2奇點 - 可)
+            const g30 = createGridStructure(2, 4, 14, 30);
+            addLevel('三聯排方格', '進階挑戰', g30.v, [
+                ...g30.e,
+                [g30.id(0, 0), g30.id(1, 1)],
+                [g30.id(0, 2), g30.id(1, 3)]
+            ]);
+            // 31. 田字加外雙斜線 (2奇點 - 可)
+            const g31 = createGridStructure(3, 3, 20, 20);
+            addLevel('斜角加固田字格', '進階挑戰', g31.v, [
+                ...g31.e,
+                [g31.id(0, 1), g31.id(1, 0)]
+            ]);
+            // 32. 田字四角全斜線 (0奇點 - 可)
+            const g32 = createGridStructure(3, 3, 20, 20);
+            addLevel('四菱田字陣', '進階挑戰', g32.v, [
+                ...g32.e,
+                [g32.id(0, 1), g32.id(1, 0)],
+                [g32.id(0, 1), g32.id(1, 2)],
+                [g32.id(1, 0), g32.id(2, 1)],
+                [g32.id(1, 2), g32.id(2, 1)]
+            ]);
+            // 33. 雙層回字連通框 (2奇點 - 可)
+            addLevel('回字迷宮門', '進階挑戰',
+                concentricPolygonVertices(4, 42, 20, -45, -45, false),
+                [
+                    [0, 1], [1, 2], [2, 3], [3, 0],
+                    [4, 5], [5, 6], [6, 7], [7, 4],
+                    [0, 4], [1, 4], [1, 5], [2, 6], [6, 3], [3, 7]
+                ]
+            );
+            // 34. 對稱八角花窗 (0奇點 - 可)
+            addLevel('四角對稱花窗', '進階挑戰',
+                concentricPolygonVertices(4, 42, 20, -45, -45, false),
+                [
+                    [0, 1], [1, 2], [2, 3], [3, 0],
+                    [4, 5], [5, 6], [6, 7], [7, 4],
+                    [0, 4], [4, 1], [1, 5], [5, 2], [2, 6], [6, 3], [3, 7], [7, 0]
+                ]
+            );
+            // 35. 鑽石切割面 (2奇點 - 可)
+            addLevel('璀璨鑽石切面', '進階挑戰',
+                [[30, 18], [70, 18], [88, 42], [50, 86], [12, 42], [50, 42]],
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 2], [0, 5], [1, 5], [5, 3]]
+            );
+            // 36. 雙塔城堡 (4奇點 - 不可)
+            addLevel('雙塔連通堡壘', '進階挑戰',
+                [[25, 14], [75, 14], [14, 38], [36, 38], [64, 38], [86, 38], [14, 82], [36, 82], [64, 82], [86, 82]],
+                [
+                    [0, 2], [0, 3], [2, 3], [2, 6], [3, 7], [6, 7],
+                    [1, 4], [1, 5], [4, 5], [4, 8], [5, 9], [8, 9],
+                    [3, 4], [7, 8]
+                ]
+            );
+            // 37. 雙塔斜橋城堡 (2奇點 - 可)
+            addLevel('雙塔斜橋城堡', '進階挑戰',
+                [[25, 14], [75, 14], [14, 38], [36, 38], [64, 38], [86, 38], [14, 82], [36, 82], [64, 82], [86, 82]],
+                [
+                    [0, 2], [0, 3], [2, 3], [2, 6], [3, 7], [6, 7],
+                    [1, 4], [1, 5], [4, 5], [4, 8], [5, 9], [8, 9],
+                    [3, 4], [7, 8], [2, 7], [4, 9]
+                ]
+            );
+            // 38. 五角完全圖 K5 (0奇點 - 可)
+            addLevel('五角全連結網 (K5)', '進階挑戰',
+                regularPolygonVertices(5, 50, 52, 40, -90),
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2], [2, 4], [4, 1], [1, 3], [3, 0]]
+            );
+            // 39. 缺一弦五芒星 (2奇點 - 可)
+            addLevel('缺一弦五芒星', '進階挑戰',
+                regularPolygonVertices(5, 50, 52, 40, -90),
+                [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2], [2, 4], [4, 1], [1, 3]]
+            );
+            // 40. 雙翼滑翔機 (2奇點 - 可)
+            addLevel('雙翼滑翔機', '進階挑戰',
+                [[50, 12], [14, 48], [36, 48], [64, 48], [86, 48], [50, 86]],
+                [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [2, 3], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5]]
+            );
+            // 41. 彼得森風格雙五角星 (10奇點 - 不可)
+            addLevel('雙層五角星籠 (Petersen)', '進階挑戰',
+                concentricPolygonVertices(5, 42, 20, -90, -90, false),
+                [
+                    [0, 1], [1, 2], [2, 3], [3, 4], [4, 0],
+                    [5, 7], [7, 9], [9, 6], [6, 8], [8, 5],
+                    [0, 5], [1, 6], [2, 7], [3, 8], [4, 9]
+                ]
+            );
+            // 42. 雙層五角螺旋環 (0奇點 - 可)
+            addLevel('五角星環交織', '進階挑戰',
+                concentricPolygonVertices(5, 42, 20, -90, -54, false),
+                [
+                    [0, 1], [1, 2], [2, 3], [3, 4], [4, 0],
+                    [5, 6], [6, 7], [7, 8], [8, 9], [9, 5],
+                    [0, 5], [5, 1], [1, 6], [6, 2], [2, 7], [7, 3], [3, 8], [8, 4], [4, 9], [9, 0]
+                ]
+            );
+            // 43. 七角星芒 {7/2} (0奇點 - 可)
+            addLevel('七角星芒陣', '進階挑戰',
+                regularPolygonVertices(7, 50, 52, 40, -90),
+                [[0, 2], [2, 4], [4, 6], [6, 1], [1, 3], [3, 5], [5, 0]]
+            );
+            // 44. 外框七角星 (0奇點 - 可)
+            addLevel('皇家七芒星', '進階挑戰',
+                regularPolygonVertices(7, 50, 52, 40, -90),
+                [
+                    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0],
+                    [0, 2], [2, 4], [4, 6], [6, 1], [1, 3], [3, 5], [5, 0]
+                ]
+            );
+            // 45. 燈籠吊飾 (4奇點 - 不可)
+            addLevel('元宵宮燈骨架', '進階挑戰',
+                [[50, 10], [26, 28], [74, 28], [18, 52], [82, 52], [26, 76], [74, 76], [50, 92]],
+                [
+                    [0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4],
+                    [3, 5], [4, 6], [5, 6], [5, 7], [6, 7], [0, 7, 0.45]
+                ]
+            );
+
+            // -----------------------------------------------------------------
+            // 【第 46 ~ 75 題：高階燒腦（複雜格網、多層星體、對稱迷陣）】
+            // -----------------------------------------------------------------
+            // 46 ~ 60：由結構化多層多邊形與網格演算法生成，確保題題獨特且難度遞增
+            const midConfigs = [
+                // 46: 雙層六角三角網 (0奇點 - 可)
+                {
+                    name: '六角晶格花窗',
+                    v: concentricPolygonVertices(6, 42, 20, -90, -60, false),
+                    e: [
+                        [0,1],[1,2],[2,3],[3,4],[4,5],[5,0],
+                        [6,7],[7,8],[8,9],[9,10],[10,11],[11,6],
+                        [0,6],[6,1],[1,7],[7,2],[2,8],[8,3],[3,9],[9,4],[4,10],[10,5],[5,11],[11,0]
+                    ]
+                },
+                // 47: 六角晶格少一弦 (2奇點 - 可)
+                {
+                    name: '缺角六角晶格',
+                    v: concentricPolygonVertices(6, 42, 20, -90, -60, false),
+                    e: [
+                        [0,1],[1,2],[2,3],[3,4],[4,5],[5,0],
+                        [6,7],[7,8],[8,9],[9,10],[10,11],
+                        [0,6],[6,1],[1,7],[7,2],[2,8],[8,3],[3,9],[9,4],[4,10],[10,5],[5,11],[11,0]
+                    ]
+                },
+                // 48: 六角稜柱骨架 (12奇點 - 不可)
+                {
+                    name: '六角柱體骨架',
+                    v: concentricPolygonVertices(6, 42, 20, -90, -90, false),
+                    e: [
+                        [0,1],[1,2],[2,3],[3,4],[4,5],[5,0],
+                        [6,7],[7,8],[8,9],[9,10],[10,11],[11,6],
+                        [0,6],[1,7],[2,8],[3,9],[4,10],[5,11]
+                    ]
+                },
+                // 49: 六角中心星陣 (0奇點 - 可)
+                {
+                    name: '六芒星核心陣',
+                    v: concentricPolygonVertices(6, 42, 18, -90, -90, true),
+                    e: [
+                        [0,1],[1,2],[2,3],[3,4],[4,5],[5,0],
+                        [0,6],[6,1],[1,7],[7,2],[2,8],[8,3],[3,9],[9,4],[4,10],[10,5],[5,11],[11,0],
+                        [6,12],[7,12],[8,12],[9,12],[10,12],[11,12],
+                        [6,7],[8,9],[10,11]
+                    ]
+                },
+                // 50: 3x3 九宮格全對角線 (0奇點 - 可)
+                (() => {
+                    const g = createGridStructure(3, 3, 18, 18);
+                    return {
+                        name: '九宮格米字迷陣',
+                        v: g.v,
+                        e: [
+                            ...g.e,
+                            [g.id(0,0), g.id(1,1)], [g.id(1,1), g.id(2,2)],
+                            [g.id(0,2), g.id(1,1)], [g.id(1,1), g.id(2,0)],
+                            [g.id(0,1), g.id(1,0)], [g.id(0,1), g.id(1,2)],
+                            [g.id(2,1), g.id(1,0)], [g.id(2,1), g.id(1,2)],
+                            [g.id(0,0), g.id(0,2), -0.35], [g.id(2,0), g.id(2,2), 0.35]
+                        ]
+                    };
+                })(),
+                // 51: 3x4 街區網格 (6奇點 - 不可)
+                (() => {
+                    const g = createGridStructure(3, 4, 15, 22);
+                    return { name: '城市街區棋盤', v: g.v, e: g.e };
+                })(),
+                // 52: 3x4 街區斜向捷徑 (2奇點 - 可)
+                (() => {
+                    const g = createGridStructure(3, 4, 15, 22);
+                    return {
+                        name: '城市街區捷徑',
+                        v: g.v,
+                        e: [
+                            ...g.e,
+                            [g.id(0,1), g.id(1,0)],
+                            [g.id(0,2), g.id(1,3)],
+                            [g.id(1,0), g.id(2,1)],
+                            [g.id(1,3), g.id(2,2)],
+                            [g.id(0,1), g.id(2,1), 0.32]
+                        ]
+                    };
+                })(),
+                // 53: 八角星 {8/3} 外框 (0奇點 - 可)
+                {
+                    name: '八角星芒羅盤',
+                    v: regularPolygonVertices(8, 50, 50, 40, -90),
+                    e: [
+                        [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0],
+                        [0,3],[3,6],[6,1],[1,4],[4,7],[7,2],[2,5],[5,0]
+                    ]
+                },
+                // 54: 八角車輪 W8 (8奇點 - 不可)
+                {
+                    name: '八方輻射輪盤',
+                    v: [[50, 50], ...regularPolygonVertices(8, 50, 50, 40, -90)],
+                    e: [
+                        [1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,1],
+                        [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8]
+                    ]
+                },
+                // 55: 八角雙翼風車 (0奇點 - 可)
+                {
+                    name: '八角雙翼風車',
+                    v: [[50, 50], ...regularPolygonVertices(8, 50, 50, 40, -90)],
+                    e: [
+                        [1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,1],
+                        [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],
+                        [1,3],[3,5],[5,7],[7,1]
+                    ]
+                },
+                // 56: 雙層七角螺旋 (0奇點 - 可)
+                {
+                    name: '七曜星環迴路',
+                    v: concentricPolygonVertices(7, 42, 20, -90, -64, false),
+                    e: (() => {
+                        const arr = [];
+                        for (let i = 0; i < 7; i++) {
+                            arr.push([i, (i + 1) % 7]);
+                            arr.push([7 + i, 7 + ((i + 1) % 7)]);
+                            arr.push([i, 7 + i]);
+                            arr.push([7 + i, (i + 1) % 7]);
+                        }
+                        return arr;
+                    })()
+                },
+                // 57: 雙層七角缺一橋 (2奇點 - 可)
+                {
+                    name: '七曜星環單橋',
+                    v: concentricPolygonVertices(7, 42, 20, -90, -64, false),
+                    e: (() => {
+                        const arr = [];
+                        for (let i = 0; i < 7; i++) {
+                            arr.push([i, (i + 1) % 7]);
+                            if (i < 6) arr.push([7 + i, 7 + ((i + 1) % 7)]);
+                            arr.push([i, 7 + i]);
+                            arr.push([7 + i, (i + 1) % 7]);
+                        }
+                        return arr;
+                    })()
+                },
+                // 58: 雙層八角稜柱 (16奇點 - 不可)
+                {
+                    name: '八角迷宮柱體',
+                    v: concentricPolygonVertices(8, 42, 20, -90, -90, false),
+                    e: (() => {
+                        const arr = [];
+                        for (let i = 0; i < 8; i++) {
+                            arr.push([i, (i + 1) % 8]);
+                            arr.push([8 + i, 8 + ((i + 1) % 8)]);
+                            arr.push([i, 8 + i]);
+                        }
+                        return arr;
+                    })()
+                },
+                // 59: 雙層八角編織環 (0奇點 - 可)
+                {
+                    name: '八角編織桂冠',
+                    v: concentricPolygonVertices(8, 42, 20, -90, -67.5, false),
+                    e: (() => {
+                        const arr = [];
+                        for (let i = 0; i < 8; i++) {
+                            arr.push([i, (i + 1) % 8]);
+                            arr.push([8 + i, 8 + ((i + 1) % 8)]);
+                            arr.push([i, 8 + i]);
+                            arr.push([8 + i, (i + 1) % 8]);
+                        }
+                        return arr;
+                    })()
+                },
+                // 60: 雙層八角星心 (2奇點 - 可)
+                {
+                    name: '八角星核引擎',
+                    v: concentricPolygonVertices(8, 42, 20, -90, -67.5, true),
+                    e: (() => {
+                        const arr = [];
+                        for (let i = 0; i < 8; i++) {
+                            arr.push([i, (i + 1) % 8]);
+                            arr.push([8 + i, 8 + ((i + 1) % 8)]);
+                            arr.push([i, 8 + i]);
+                            arr.push([8 + i, (i + 1) % 8]);
+                        }
+                        // 中心點 16 連向 6 個內環點 -> 產生 2 個奇點
+                        [8, 9, 10, 12, 13, 14].forEach(k => arr.push([16, k]));
+                        return arr;
+                    })()
+                }
+            ];
+
+            midConfigs.forEach(cfg => addLevel(cfg.name, '高階燒腦', cfg.v, cfg.e));
+
+            // 61 ~ 75：進階網格與多環複合圖
+            // 61. 4x4 棋盤網格 (8奇點 - 不可)
+            const g61 = createGridStructure(4, 4, 16, 16);
+            addLevel('四階棋盤方陣', '高階燒腦', g61.v, g61.e);
+
+            // 62. 4x4 棋盤外圍斜線強化 (0奇點 - 可)
+            const g62 = createGridStructure(4, 4, 16, 16);
+            addLevel('四階全迴路方陣', '高階燒腦', g62.v, [
+                ...g62.e,
+                [g62.id(0, 1), g62.id(0, 2), -0.45],
+                [g62.id(3, 1), g62.id(3, 2), 0.45],
+                [g62.id(1, 0), g62.id(2, 0), -0.45],
+                [g62.id(1, 3), g62.id(2, 3), 0.45]
+            ]);
+
+            // 63. 4x4 棋盤單開口 (2奇點 - 可)
+            const g63 = createGridStructure(4, 4, 16, 16);
+            addLevel('四階雙端迷陣', '高階燒腦', g63.v, [
+                ...g63.e,
+                [g63.id(0, 1), g63.id(0, 2), -0.45],
+                [g63.id(3, 1), g63.id(3, 2), 0.45],
+                [g63.id(1, 0), g63.id(2, 0), -0.45]
+            ]);
+
+            // 64. 九角星 {9/2} (0奇點 - 可)
+            addLevel('九曜連環星', '高階燒腦',
+                regularPolygonVertices(9, 50, 50, 42, -90),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 9; i++) {
+                        arr.push([i, (i + 1) % 9]);
+                        arr.push([i, (i + 2) % 9]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 65. 九角星外加單軸線 (2奇點 - 可)
+            addLevel('九曜破陣圖', '高階燒腦',
+                regularPolygonVertices(9, 50, 50, 42, -90),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 9; i++) {
+                        arr.push([i, (i + 1) % 9]);
+                        arr.push([i, (i + 2) % 9]);
+                    }
+                    arr.push([0, 4]);
+                    return arr;
+                })()
+            );
+
+            // 66. 三層同心三角神殿 (0奇點 - 可)
+            addLevel('三層三角聖殿', '高階燒腦',
+                [
+                    ...regularPolygonVertices(3, 50, 56, 44, -90),
+                    ...regularPolygonVertices(3, 50, 56, 26, -90),
+                    ...regularPolygonVertices(3, 50, 56, 11, -90)
+                ],
+                [
+                    [0,1],[1,2],[2,0],
+                    [3,4],[4,5],[5,3],
+                    [6,7],[7,8],[8,6],
+                    [0,3],[3,1],[1,4],[4,2],[2,5],[5,0],
+                    [3,6],[6,4],[4,7],[7,5],[5,8],[8,3]
+                ]
+            );
+
+            // 67. 三層同心正方形 (8奇點 - 不可)
+            addLevel('三層回字方城', '高階燒腦',
+                [
+                    ...regularPolygonVertices(4, 50, 50, 44, -45),
+                    ...regularPolygonVertices(4, 50, 50, 28, -45),
+                    ...regularPolygonVertices(4, 50, 50, 13, -45)
+                ],
+                [
+                    [0,1],[1,2],[2,3],[3,0],
+                    [4,5],[5,6],[6,7],[7,4],
+                    [8,9],[9,10],[10,11],[11,8],
+                    [0,4],[1,5],[2,6],[3,7],
+                    [4,8],[5,9],[6,10],[7,11]
+                ]
+            );
+
+            // 68. 三層同心正方形斜橋連通 (0奇點 - 可)
+            addLevel('三層回字連環陣', '高階燒腦',
+                [
+                    ...regularPolygonVertices(4, 50, 50, 44, -45),
+                    ...regularPolygonVertices(4, 50, 50, 28, -45),
+                    ...regularPolygonVertices(4, 50, 50, 13, -45)
+                ],
+                [
+                    [0,1],[1,2],[2,3],[3,0],
+                    [4,5],[5,6],[6,7],[7,4],
+                    [8,9],[9,10],[10,11],[11,8],
+                    [0,4],[4,1],[1,5],[5,2],[2,6],[6,3],[3,7],[7,0],
+                    [4,8],[8,5],[5,9],[9,6],[6,10],[10,7],[7,11],[11,4]
+                ]
+            );
+
+            // 69. 三層回字單缺口 (2奇點 - 可)
+            addLevel('三層回字破陣口', '高階燒腦',
+                [
+                    ...regularPolygonVertices(4, 50, 50, 44, -45),
+                    ...regularPolygonVertices(4, 50, 50, 28, -45),
+                    ...regularPolygonVertices(4, 50, 50, 13, -45)
+                ],
+                [
+                    [0,1],[1,2],[2,3],[3,0],
+                    [4,5],[5,6],[6,7],[7,4],
+                    [8,9],[9,10],[10,11],
+                    [0,4],[4,1],[1,5],[5,2],[2,6],[6,3],[3,7],[7,0],
+                    [4,8],[8,5],[5,9],[9,6],[6,10],[10,7],[7,11],[11,4]
+                ]
+            );
+
+            // 70. 十角太陽輪 (10奇點 - 不可)
+            addLevel('十方太陽輪盤', '高階燒腦',
+                [[50, 50], ...regularPolygonVertices(10, 50, 50, 42, -90)],
+                (() => {
+                    const arr = [];
+                    for (let i = 1; i <= 10; i++) {
+                        arr.push([i, i === 10 ? 1 : i + 1]);
+                        arr.push([0, i]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 71. 十角星芒花冠 (0奇點 - 可)
+            addLevel('十角星芒花冠', '高階燒腦',
+                regularPolygonVertices(10, 50, 50, 42, -90),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 10; i++) {
+                        arr.push([i, (i + 1) % 10]);
+                        arr.push([i, (i + 3) % 10]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 72. 蜂巢三連環 (2奇點 - 可)
+            addLevel('蜂巢結晶連環', '高階燒腦',
+                [
+                    [50, 14], [26, 26], [74, 26],
+                    [26, 50], [50, 38], [74, 50],
+                    [14, 68], [38, 68], [62, 68], [86, 68],
+                    [26, 86], [50, 86], [74, 86]
+                ],
+                [
+                    [0,1],[0,2],[1,4],[2,4],[1,3],[3,4],[2,5],[4,5],
+                    [3,6],[3,7],[6,7],[6,10],[7,10],[7,8],[4,7],[4,8],
+                    [5,8],[5,9],[8,9],[8,12],[9,12],[10,11],[11,12],[7,11],[8,11]
+                ]
+            );
+
+            // 73. 雙菱交錯網 (4奇點 - 不可)
+            const g73 = createGridStructure(3, 5, 12, 20);
+            addLevel('五柱長廊網格', '高階燒腦', g73.v, g73.e);
+
+            // 74. 五柱長廊全交叉 (2奇點 - 可)
+            const g74 = createGridStructure(3, 5, 12, 20);
+            addLevel('五柱斜樑長廊', '高階燒腦', g74.v, [
+                ...g74.e,
+                [g74.id(0,1), g74.id(1,0)],
+                [g74.id(1,0), g74.id(2,1)],
+                [g74.id(0,2), g74.id(1,1)],
+                [g74.id(2,2), g74.id(1,3)],
+                [g74.id(0,3), g74.id(1,4)],
+                [g74.id(1,4), g74.id(2,3)],
+                [g74.id(0,1), g74.id(0,3), -0.35]
+            ]);
+
+            // 75. 雙五角中心全連網 (0奇點 - 可)
+            addLevel('五芒星聖殿核心', '高階燒腦',
+                concentricPolygonVertices(5, 42, 20, -90, -54, true),
+                [
+                    [0,1],[1,2],[2,3],[3,4],[4,0],
+                    [5,6],[6,7],[7,8],[8,9],[9,5],
+                    [0,5],[5,1],[1,6],[6,2],[2,7],[7,3],[3,8],[8,4],[4,9],[9,0],
+                    [10,5],[10,6],[10,7],[10,8],
+                    [5,7],[6,8]
+                ]
+            );
+
+            // -----------------------------------------------------------------
+            // 【第 76 ~ 100 題：大師終極（大型複合星陣、高階多層網格、百關壓軸）】
+            // -----------------------------------------------------------------
+            // 76. 三層五角星陣 (0奇點 - 可)
+            addLevel('三層五芒星迷宮', '大師終極',
+                [
+                    ...regularPolygonVertices(5, 50, 52, 43, -90),
+                    ...regularPolygonVertices(5, 50, 52, 27, -54),
+                    ...regularPolygonVertices(5, 50, 52, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 5; i++) {
+                        arr.push([i, (i + 1) % 5]);
+                        arr.push([5 + i, 5 + ((i + 1) % 5)]);
+                        arr.push([10 + i, 10 + ((i + 1) % 5)]);
+                        arr.push([i, 5 + i]);
+                        arr.push([5 + i, (i + 1) % 5]);
+                        arr.push([5 + i, 10 + i]);
+                        arr.push([10 + i, 5 + ((i + 1) % 5)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 77. 三層五角星單弦破口 (2奇點 - 可)
+            addLevel('三層五芒星單橋', '大師終極',
+                [
+                    ...regularPolygonVertices(5, 50, 52, 43, -90),
+                    ...regularPolygonVertices(5, 50, 52, 27, -54),
+                    ...regularPolygonVertices(5, 50, 52, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 5; i++) {
+                        arr.push([i, (i + 1) % 5]);
+                        arr.push([5 + i, 5 + ((i + 1) % 5)]);
+                        if (i < 4) arr.push([10 + i, 10 + ((i + 1) % 5)]);
+                        arr.push([i, 5 + i]);
+                        arr.push([5 + i, (i + 1) % 5]);
+                        arr.push([5 + i, 10 + i]);
+                        arr.push([10 + i, 5 + ((i + 1) % 5)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 78. 三層五角放射網 (10奇點 - 不可)
+            addLevel('三層五角放射塔', '大師終極',
+                [
+                    ...regularPolygonVertices(5, 50, 52, 43, -90),
+                    ...regularPolygonVertices(5, 50, 52, 27, -90),
+                    ...regularPolygonVertices(5, 50, 52, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 5; i++) {
+                        arr.push([i, (i + 1) % 5]);
+                        arr.push([5 + i, 5 + ((i + 1) % 5)]);
+                        arr.push([10 + i, 10 + ((i + 1) % 5)]);
+                        arr.push([i, 5 + i]);
+                        arr.push([5 + i, 10 + i]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 79. 雙層九角編織陣 (0奇點 - 可)
+            addLevel('九宮星環編織網', '大師終極',
+                concentricPolygonVertices(9, 43, 22, -90, -70, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 9; i++) {
+                        arr.push([i, (i + 1) % 9]);
+                        arr.push([9 + i, 9 + ((i + 1) % 9)]);
+                        arr.push([i, 9 + i]);
+                        arr.push([9 + i, (i + 1) % 9]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 80. 雙層九角星單軸 (2奇點 - 可)
+            addLevel('九宮星環破陣線', '大師終極',
+                concentricPolygonVertices(9, 43, 22, -90, -70, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 9; i++) {
+                        arr.push([i, (i + 1) % 9]);
+                        arr.push([9 + i, 9 + ((i + 1) % 9)]);
+                        arr.push([i, 9 + i]);
+                        arr.push([9 + i, (i + 1) % 9]);
+                    }
+                    arr.push([9, 13]);
+                    return arr;
+                })()
+            );
+
+            // 81. 4x4 米字對角線巨陣 (0奇點 - 可)
+            const g81 = createGridStructure(4, 4, 15, 15);
+            addLevel('四階交叉星雲陣', '大師終極', g81.v, [
+                ...g81.e,
+                [g81.id(0,0), g81.id(1,1)], [g81.id(1,1), g81.id(0,2)],
+                [g81.id(0,1), g81.id(1,2)], [g81.id(1,2), g81.id(0,3)],
+                [g81.id(1,0), g81.id(2,1)], [g81.id(2,1), g81.id(3,0)],
+                [g81.id(1,3), g81.id(2,2)], [g81.id(2,2), g81.id(3,3)],
+                [g81.id(3,1), g81.id(2,1)], [g81.id(3,2), g81.id(2,2)],
+                [g81.id(0,0), g81.id(3,0), -0.42], [g81.id(0,3), g81.id(3,3), 0.42]
+            ]);
+
+            // 82. 4x4 雙奇點迷宮 (2奇點 - 可)
+            const g82 = createGridStructure(4, 4, 15, 15);
+            addLevel('四階雙極迷宮', '大師終極', g82.v, [
+                ...g82.e,
+                [g82.id(0,1), g82.id(1,0)],
+                [g82.id(0,2), g82.id(1,3)],
+                [g82.id(2,0), g82.id(3,1)],
+                [g82.id(2,3), g82.id(3,2)],
+                [g82.id(1,1), g82.id(2,2)]
+            ]);
+
+            // 83. 三層六角星盤 (0奇點 - 可)
+            addLevel('三層六角時空盤', '大師終極',
+                [
+                    ...regularPolygonVertices(6, 50, 50, 44, -90),
+                    ...regularPolygonVertices(6, 50, 50, 28, -60),
+                    ...regularPolygonVertices(6, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 6; i++) {
+                        arr.push([i, (i + 1) % 6]);
+                        arr.push([6 + i, 6 + ((i + 1) % 6)]);
+                        arr.push([12 + i, 12 + ((i + 1) % 6)]);
+                        arr.push([i, 6 + i]);
+                        arr.push([6 + i, (i + 1) % 6]);
+                        arr.push([6 + i, 12 + i]);
+                        arr.push([12 + i, 6 + ((i + 1) % 6)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 84. 三層六角星盤缺口 (2奇點 - 可)
+            addLevel('三層六角星門', '大師終極',
+                [
+                    ...regularPolygonVertices(6, 50, 50, 44, -90),
+                    ...regularPolygonVertices(6, 50, 50, 28, -60),
+                    ...regularPolygonVertices(6, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 6; i++) {
+                        arr.push([i, (i + 1) % 6]);
+                        arr.push([6 + i, 6 + ((i + 1) % 6)]);
+                        if (i < 5) arr.push([12 + i, 12 + ((i + 1) % 6)]);
+                        arr.push([i, 6 + i]);
+                        arr.push([6 + i, (i + 1) % 6]);
+                        arr.push([6 + i, 12 + i]);
+                        arr.push([12 + i, 6 + ((i + 1) % 6)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 85. 三層六角放射陣 (12奇點 - 不可)
+            addLevel('三層六角放射陣', '大師終極',
+                [
+                    ...regularPolygonVertices(6, 50, 50, 44, -90),
+                    ...regularPolygonVertices(6, 50, 50, 28, -90),
+                    ...regularPolygonVertices(6, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 6; i++) {
+                        arr.push([i, (i + 1) % 6]);
+                        arr.push([6 + i, 6 + ((i + 1) % 6)]);
+                        arr.push([12 + i, 12 + ((i + 1) % 6)]);
+                        arr.push([i, 6 + i]);
+                        arr.push([6 + i, 12 + i]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 86. 雙層十角編織陣 (0奇點 - 可)
+            addLevel('十全十美星環陣', '大師終極',
+                concentricPolygonVertices(10, 44, 23, -90, -72, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 10; i++) {
+                        arr.push([i, (i + 1) % 10]);
+                        arr.push([10 + i, 10 + ((i + 1) % 10)]);
+                        arr.push([i, 10 + i]);
+                        arr.push([10 + i, (i + 1) % 10]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 87. 雙層十角單弦 (2奇點 - 可)
+            addLevel('十方星環單橋', '大師終極',
+                concentricPolygonVertices(10, 44, 23, -90, -72, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 10; i++) {
+                        arr.push([i, (i + 1) % 10]);
+                        arr.push([10 + i, 10 + ((i + 1) % 10)]);
+                        arr.push([i, 10 + i]);
+                        arr.push([10 + i, (i + 1) % 10]);
+                    }
+                    arr.push([10, 15]);
+                    return arr;
+                })()
+            );
+
+            // 88. 5x5 棋盤大陣 (12奇點 - 不可)
+            const g88 = createGridStructure(5, 5, 13, 13);
+            addLevel('五階縱橫棋盤', '大師終極', g88.v, g88.e);
+
+            // 89. 4x5 長方格網連通改造 (2奇點 - 可)
+            const g89 = createGridStructure(4, 5, 12, 16);
+            addLevel('二十星宿連通網', '大師終極', g89.v, [
+                ...g89.e,
+                [g89.id(0,1), g89.id(1,0)],
+                [g89.id(2,0), g89.id(3,1)],
+                [g89.id(0,3), g89.id(1,4)],
+                [g89.id(2,4), g89.id(3,3)],
+                [g89.id(0,2), g89.id(3,2), 0.35]
+            ]);
+
+            // 90. 十二角星芒萬花筒 (0奇點 - 可)
+            addLevel('十二星宮萬花筒', '大師終極',
+                regularPolygonVertices(12, 50, 50, 43, -90),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 12; i++) {
+                        arr.push([i, (i + 1) % 12]);
+                        arr.push([i, (i + 5) % 12]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 91. 十二星宮雙極陣 (2奇點 - 可)
+            addLevel('十二星宮雙極陣', '大師終極',
+                regularPolygonVertices(12, 50, 50, 43, -90),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 12; i++) {
+                        arr.push([i, (i + 1) % 12]);
+                        arr.push([i, (i + 4) % 12]);
+                    }
+                    arr.push([0, 6]);
+                    return arr;
+                })()
+            );
+
+            // 92. 十二角輪盤 W12 (12奇點 - 不可)
+            addLevel('十二時鐘輪盤', '大師終極',
+                [[50, 50], ...regularPolygonVertices(12, 50, 50, 43, -90)],
+                (() => {
+                    const arr = [];
+                    for (let i = 1; i <= 12; i++) {
+                        arr.push([i, i === 12 ? 1 : i + 1]);
+                        arr.push([0, i]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 93. 三層七角星冠 (0奇點 - 可)
+            addLevel('三層七曜皇冠', '大師終極',
+                [
+                    ...regularPolygonVertices(7, 50, 50, 44, -90),
+                    ...regularPolygonVertices(7, 50, 50, 28, -64),
+                    ...regularPolygonVertices(7, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 7; i++) {
+                        arr.push([i, (i + 1) % 7]);
+                        arr.push([7 + i, 7 + ((i + 1) % 7)]);
+                        arr.push([14 + i, 14 + ((i + 1) % 7)]);
+                        arr.push([i, 7 + i]);
+                        arr.push([7 + i, (i + 1) % 7]);
+                        arr.push([7 + i, 14 + i]);
+                        arr.push([14 + i, 7 + ((i + 1) % 7)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 94. 三層七角星冠單缺口 (2奇點 - 可)
+            addLevel('三層七曜雙極陣', '大師終極',
+                [
+                    ...regularPolygonVertices(7, 50, 50, 44, -90),
+                    ...regularPolygonVertices(7, 50, 50, 28, -64),
+                    ...regularPolygonVertices(7, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 7; i++) {
+                        arr.push([i, (i + 1) % 7]);
+                        arr.push([7 + i, 7 + ((i + 1) % 7)]);
+                        if (i < 6) arr.push([14 + i, 14 + ((i + 1) % 7)]);
+                        arr.push([i, 7 + i]);
+                        arr.push([7 + i, (i + 1) % 7]);
+                        arr.push([7 + i, 14 + i]);
+                        arr.push([14 + i, 7 + ((i + 1) % 7)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 95. 雙層十二角晶格 (0奇點 - 可)
+            addLevel('十二宮雙層星環', '大師終極',
+                concentricPolygonVertices(12, 44, 24, -90, -75, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 12; i++) {
+                        arr.push([i, (i + 1) % 12]);
+                        arr.push([12 + i, 12 + ((i + 1) % 12)]);
+                        arr.push([i, 12 + i]);
+                        arr.push([12 + i, (i + 1) % 12]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 96. 雙層十二角稜柱 (24奇點 - 不可)
+            addLevel('十二宮迷陣柱體', '大師終極',
+                concentricPolygonVertices(12, 44, 24, -90, -90, false),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 12; i++) {
+                        arr.push([i, (i + 1) % 12]);
+                        arr.push([12 + i, 12 + ((i + 1) % 12)]);
+                        arr.push([i, 12 + i]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 97. 5x5 全連通歐拉迴路方陣 (0奇點 - 可)
+            const g97 = createGridStructure(5, 5, 13, 13);
+            addLevel('五階全連通星宿陣', '大師終極', g97.v, [
+                ...g97.e,
+                [g97.id(0,1), g97.id(1,0)],
+                [g97.id(0,2), g97.id(0,3), -0.45],
+                [g97.id(1,4), g97.id(2,4), 0.45],
+                [g97.id(3,4), g97.id(4,3)],
+                [g97.id(4,2), g97.id(4,1), 0.45],
+                [g97.id(3,0), g97.id(2,0), -0.45]
+            ]);
+
+            // 98. 三層八角星雲陣 (0奇點 - 可)
+            addLevel('三層八角星雲陣', '大師終極',
+                [
+                    ...regularPolygonVertices(8, 50, 50, 44, -90),
+                    ...regularPolygonVertices(8, 50, 50, 28, -67.5),
+                    ...regularPolygonVertices(8, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 8; i++) {
+                        arr.push([i, (i + 1) % 8]);
+                        arr.push([8 + i, 8 + ((i + 1) % 8)]);
+                        arr.push([16 + i, 16 + ((i + 1) % 8)]);
+                        arr.push([i, 8 + i]);
+                        arr.push([8 + i, (i + 1) % 8]);
+                        arr.push([8 + i, 16 + i]);
+                        arr.push([16 + i, 8 + ((i + 1) % 8)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 99. 三層八角星雲單缺口 (2奇點 - 可)
+            addLevel('九十九關・星雲之門', '大師終極',
+                [
+                    ...regularPolygonVertices(8, 50, 50, 44, -90),
+                    ...regularPolygonVertices(8, 50, 50, 28, -67.5),
+                    ...regularPolygonVertices(8, 50, 50, 13, -90)
+                ],
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 8; i++) {
+                        arr.push([i, (i + 1) % 8]);
+                        arr.push([8 + i, 8 + ((i + 1) % 8)]);
+                        if (i < 7) arr.push([16 + i, 16 + ((i + 1) % 8)]);
+                        arr.push([i, 8 + i]);
+                        arr.push([8 + i, (i + 1) % 8]);
+                        arr.push([8 + i, 16 + i]);
+                        arr.push([16 + i, 8 + ((i + 1) % 8)]);
+                    }
+                    return arr;
+                })()
+            );
+
+            // 100. 第100關：歐拉百關大滿貫（雙層十角星核聖殿，2奇點，49條邊）
+            addLevel('第一百關・歐拉大師聖殿', '大師終極',
+                concentricPolygonVertices(10, 44, 23, -90, -72, true),
+                (() => {
+                    const arr = [];
+                    for (let i = 0; i < 10; i++) {
+                        arr.push([i, (i + 1) % 10]);
+                        arr.push([10 + i, 10 + ((i + 1) % 10)]);
+                        arr.push([i, 10 + i]);
+                        arr.push([10 + i, (i + 1) % 10]);
+                    }
+                    // 中心頂點 20 連接 8 個內圈頂點，再加上 1 條內弦 -> 恰好 2 個奇點
+                    [10, 11, 12, 13, 15, 16, 17, 18].forEach(vIdx => arr.push([20, vIdx]));
+                    arr.push([14, 19]);
+                    return arr;
+                })()
+            );
+
+            return levels;
+        }
+
+        // ==================== 3. 遊戲狀態管理與存檔系統 ====================
+        const STORAGE_KEY = 'euler_100_challenge_save_v1';
+        const ALL_LEVELS = buildAll100Levels();
+
+        const state = {
+            currentLevelIndex: 0,       // 0 ~ 99
+            maxUnlockedIndex: 0,        // 最高已解鎖關卡索引 (嚴格禁止跳過未完成關卡)
+            clearedLevels: new Set(),   // 已通關的關卡索引集合
+            phase: 'JUDGE',             // 'JUDGE' (第一階段判斷) | 'DRAW' (第二階段畫圖) | 'CLEARED' (已過關)
+            showDegrees: false,         // 是否在頂點上顯示度數與奇偶顏色
+            // 畫圖階段狀態
+            currentVertex: null,        // 當前筆尖所在的頂點索引
+            usedEdges: new Set(),       // 已走過的邊索引集合
+            history: [],                // 步數歷史紀錄 [{ from, to, edgeIndex }]
+            isDragging: false,          // 是否正在滑鼠/觸控拖曳中
+            pointerPos: null,           // 當前游標座標 {x, y} (畫布像素)
+            pulseTick: 0                // 動畫計時器
+        };
+
+        // 載入 localStorage 進度
+        function loadProgress() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                if (Array.isArray(data.cleared)) {
+                    state.clearedLevels = new Set(data.cleared.filter(n => Number.isInteger(n) && n >= 0 && n < 100));
+                }
+                if (Number.isInteger(data.maxUnlocked)) {
+                    state.maxUnlockedIndex = Math.max(0, Math.min(99, data.maxUnlocked));
+                }
+                if (Number.isInteger(data.currentLevel)) {
+                    state.currentLevelIndex = Math.max(0, Math.min(state.maxUnlockedIndex, data.currentLevel));
+                }
+            } catch (err) {
+                console.warn('無法讀取存檔，將使用全新進度', err);
+            }
+        }
+
+        // 儲存進度至 localStorage
+        function saveProgress() {
+            try {
+                const data = {
+                    currentLevel: state.currentLevelIndex,
+                    maxUnlocked: state.maxUnlockedIndex,
+                    cleared: Array.from(state.clearedLevels)
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (err) {
+                console.warn('無法寫入存檔', err);
+            }
+        }
+
+        // ==================== 4. UI 與訊息回饋更新 ====================
+        const dom = {
+            difficultyBadge: document.getElementById('difficulty-badge'),
+            progressText: document.getElementById('progress-text'),
+            levelNumberBadge: document.getElementById('level-number-badge'),
+            levelTitle: document.getElementById('level-title'),
+            toggleDegree: document.getElementById('toggle-degree'),
+            statVertices: document.getElementById('stat-vertices'),
+            statEdges: document.getElementById('stat-edges'),
+            oddCountBadge: document.getElementById('odd-count-badge'),
+            statOdd: document.getElementById('stat-odd'),
+            edgeProgressBadge: document.getElementById('edge-progress-badge'),
+            phase1OverlayBadge: document.getElementById('phase1-overlay-badge'),
+            phase2OverlayBadge: document.getElementById('phase2-overlay-badge'),
+            stepIndicator1: document.getElementById('step-indicator-1'),
+            stepIndicator2: document.getElementById('step-indicator-2'),
+            levelClearedTag: document.getElementById('level-cleared-tag'),
+            panelPhase1: document.getElementById('panel-phase1'),
+            panelPhase2: document.getElementById('panel-phase2'),
+            phase2TipText: document.getElementById('phase2-tip-text'),
+            btnJudgeYes: document.getElementById('btn-judge-yes'),
+            btnJudgeNo: document.getElementById('btn-judge-no'),
+            btnHintPhase1: document.getElementById('btn-hint-phase1'),
+            btnUndoStep: document.getElementById('btn-undo-step'),
+            btnResetDraw: document.getElementById('btn-reset-draw'),
+            feedbackBox: document.getElementById('feedback-box'),
+            feedbackIcon: document.getElementById('feedback-icon'),
+            feedbackTitle: document.getElementById('feedback-title'),
+            feedbackMessage: document.getElementById('feedback-message'),
+            btnPrevLevel: document.getElementById('btn-prev-level'),
+            btnNextLevel: document.getElementById('btn-next-level'),
+            lockStatusText: document.getElementById('lock-status-text'),
+            canvas: document.getElementById('game-canvas'),
+            // 彈窗
+            modalLevels: document.getElementById('modal-levels'),
+            levelsGrid: document.getElementById('levels-grid'),
+            modalTheory: document.getElementById('modal-theory'),
+            modalConfirmReset: document.getElementById('modal-confirm-reset')
+        };
+
+        const ctx = dom.canvas.getContext('2d');
+
+        // 設定回饋面板樣式與訊息
+        function setFeedback(type, title, htmlMessage) {
+            const styles = {
+                info: {
+                    box: 'bg-slate-800/90 border-slate-700',
+                    iconBg: 'bg-indigo-500/20 text-indigo-400',
+                    icon: 'fa-compass-drafting',
+                    titleColor: 'text-white'
+                },
+                success: {
+                    box: 'bg-emerald-950/60 border-emerald-500/50',
+                    iconBg: 'bg-emerald-500/20 text-emerald-400',
+                    icon: 'fa-trophy',
+                    titleColor: 'text-emerald-300'
+                },
+                warning: {
+                    box: 'bg-amber-950/60 border-amber-500/50',
+                    iconBg: 'bg-amber-500/20 text-amber-400',
+                    icon: 'fa-lightbulb',
+                    titleColor: 'text-amber-300'
+                },
+                error: {
+                    box: 'bg-rose-950/60 border-rose-500/50',
+                    iconBg: 'bg-rose-500/20 text-rose-400',
+                    icon: 'fa-circle-exclamation',
+                    titleColor: 'text-rose-300'
+                }
+            };
+            const s = styles[type] || styles.info;
+            dom.feedbackBox.className = `border rounded-2xl p-4 shadow-lg transition-all ${s.box}`;
+            dom.feedbackIcon.className = `w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg mt-0.5 ${s.iconBg}`;
+            dom.feedbackIcon.innerHTML = `<i class="fa-solid ${s.icon}"></i>`;
+            dom.feedbackTitle.className = `text-sm font-bold ${s.titleColor}`;
+            dom.feedbackTitle.textContent = title;
+            dom.feedbackMessage.innerHTML = htmlMessage;
+        }
+
+        // 切換至指定關卡
+        function loadLevel(index) {
+            if (index < 0 || index >= ALL_LEVELS.length) return;
+            // 嚴格禁止跳題：不能載入大於 maxUnlockedIndex 的關卡
+            if (index > state.maxUnlockedIndex) return;
+
+            state.currentLevelIndex = index;
+            state.phase = 'JUDGE';
+            state.currentVertex = null;
+            state.usedEdges.clear();
+            state.history = [];
+            state.isDragging = false;
+            state.pointerPos = null;
+
+            saveProgress();
+            updateUI();
+            drawCanvas();
+        }
+
+        // 更新所有介面元件
+        function updateUI() {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            const isAlreadyCleared = state.clearedLevels.has(state.currentLevelIndex);
+
+            // 頂部與關卡資訊
+            dom.difficultyBadge.textContent = level.difficulty;
+            dom.progressText.textContent = `${state.clearedLevels.size} / 100`;
+            dom.levelNumberBadge.textContent = `第 ${level.id} / 100 題`;
+            dom.levelTitle.textContent = level.name;
+
+            dom.statVertices.textContent = level.vertices.length;
+            dom.statEdges.textContent = level.edges.length;
+            dom.statOdd.textContent = level.oddCount;
+            dom.oddCountBadge.classList.toggle('hidden', !state.showDegrees && state.phase === 'JUDGE');
+            dom.edgeProgressBadge.textContent = `${state.usedEdges.size} / ${level.edges.length}`;
+
+            // 已通關標籤
+            dom.levelClearedTag.classList.toggle('hidden', !isAlreadyCleared);
+
+            // 步驟指示器與面板切換
+            if (state.phase === 'JUDGE') {
+                dom.stepIndicator1.className = 'p-3 rounded-xl border-2 border-indigo-500 bg-indigo-500/15 flex items-center gap-2.5 transition';
+                dom.stepIndicator2.className = 'p-3 rounded-xl border-2 border-slate-700 bg-slate-900/50 opacity-60 flex items-center gap-2.5 transition';
+                dom.panelPhase1.classList.remove('hidden');
+                dom.panelPhase2.classList.add('hidden');
+                dom.phase1OverlayBadge.classList.remove('hidden');
+                dom.phase2OverlayBadge.classList.add('hidden');
+
+                setFeedback(
+                    'info',
+                    `第 ${level.id} 題：請先判斷是否可以一筆畫`,
+                    `<p>觀察圖中每個頂點連接的線段數（度數）。</p>
+                     <p class="text-indigo-300">提示：只有當「奇數度頂點」為 <strong>0 個</strong> 或 <strong>2 個</strong> 時，才可以一筆畫完成！</p>`
+                );
+            } else if (state.phase === 'DRAW') {
+                dom.stepIndicator1.className = 'p-3 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 flex items-center gap-2.5 transition';
+                dom.stepIndicator2.className = 'p-3 rounded-xl border-2 border-amber-400 bg-amber-500/15 flex items-center gap-2.5 transition';
+                dom.panelPhase1.classList.add('hidden');
+                dom.panelPhase2.classList.remove('hidden');
+                dom.phase1OverlayBadge.classList.add('hidden');
+                dom.phase2OverlayBadge.classList.remove('hidden');
+
+                if (level.oddCount === 2) {
+                    dom.phase2TipText.innerHTML = `此圖有 <strong class="text-rose-400">2 個奇數點</strong>！根據歐拉定理，請務必從其中一個<strong>奇數點（粉紅色頂點）</strong>作為起點出發，否則中途會卡住喔！`;
+                } else {
+                    dom.phase2TipText.innerHTML = `此圖有 <strong class="text-emerald-400">0 個奇數點</strong>（全都是偶數點）！您可以從<strong>任意一個頂點</strong>作為起點出發，最後會回到起點。`;
+                }
+            } else if (state.phase === 'CLEARED') {
+                dom.stepIndicator1.className = 'p-3 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 flex items-center gap-2.5 transition';
+                dom.stepIndicator2.className = 'p-3 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 flex items-center gap-2.5 transition';
+                dom.phase1OverlayBadge.classList.add('hidden');
+                dom.phase2OverlayBadge.classList.add('hidden');
+            }
+
+            // 退回與重畫按鈕狀態
+            dom.btnUndoStep.disabled = state.history.length === 0;
+
+            // 上一題 / 下一題 鎖定邏輯
+            dom.btnPrevLevel.disabled = state.currentLevelIndex === 0;
+            const canGoNext = isAlreadyCleared && state.currentLevelIndex < ALL_LEVELS.length - 1;
+            dom.btnNextLevel.disabled = !canGoNext;
+
+            if (isAlreadyCleared) {
+                if (state.currentLevelIndex === ALL_LEVELS.length - 1) {
+                    dom.lockStatusText.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-crown mr-1"></i>恭喜完成全部 100 道一筆畫挑戰！</span>`;
+                } else {
+                    dom.lockStatusText.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-unlock mr-1"></i>本題已過關！可前往下一題</span>`;
+                }
+            } else {
+                dom.lockStatusText.innerHTML = `<span class="text-amber-400 font-medium"><i class="fa-solid fa-lock mr-1"></i>完成本題後解鎖下一題</span>`;
+            }
+        }
+
+        // 當關卡順利通過時呼叫
+        function markCurrentLevelCleared() {
+            state.phase = 'CLEARED';
+            state.clearedLevels.add(state.currentLevelIndex);
+            if (state.currentLevelIndex + 1 > state.maxUnlockedIndex && state.currentLevelIndex + 1 < ALL_LEVELS.length) {
+                state.maxUnlockedIndex = state.currentLevelIndex + 1;
+            }
+            saveProgress();
+            updateUI();
+            drawCanvas();
+        }
+
+        // ==================== 5. 第一階段：判斷可否一筆畫 ====================
+        function handleJudgeAnswer(userSaysCanDraw) {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+
+            // 情況 A：題目「可以一筆畫」，且學生答對
+            if (level.canDraw && userSaysCanDraw) {
+                state.phase = 'DRAW';
+                updateUI();
+                setFeedback(
+                    'success',
+                    '判斷正確！這個圖形「可以一筆畫」！',
+                    `<p>圖中共有 <strong>${level.oddCount} 個奇數度頂點</strong>（連接單數條線的點）。</p>
+                     <p class="text-emerald-300 font-medium">現在進入第二階段：請在左側畫布點擊頂點或滑動，沿著線段把整個圖案一筆畫出來！</p>`
+                );
+                drawCanvas();
+                return;
+            }
+
+            // 情況 B：題目「不可以一筆畫」，且學生答對 -> 直接顯示解析並過關
+            if (!level.canDraw && !userSaysCanDraw) {
+                // 自動開啟度數顯示讓學生看清楚奇數點在哪裡
+                state.showDegrees = true;
+                dom.toggleDegree.checked = true;
+                dom.panelPhase1.classList.add('hidden');
+                dom.panelPhase2.classList.add('hidden');
+
+                markCurrentLevelCleared();
+
+                setFeedback(
+                    'success',
+                    '判斷正確！此圖形確實「無法一筆畫」完成（恭喜過關）！',
+                    `<p><strong>【歐拉定理數學解析】</strong></p>
+                     <p>請看畫布上標示為粉紅色的頂點：這個圖形共有 <strong class="text-rose-400">${level.oddCount} 個奇數度頂點</strong>（連接單數條線的交匯點）。</p>
+                     <p>根據歐拉一筆畫定理，一筆畫最多只能有 1 個起點與 1 個終點（最多 2 個奇數點）。因為 ${level.oddCount} > 2，所以<strong>絕對不可能不重複線段一筆畫完</strong>！請點擊右下角「下一題」繼續挑戰。</p>`
+                );
+                drawCanvas();
+                return;
+            }
+
+            // 情況 C：學生判斷錯誤 -> 給予提示並自動開啟度數輔助
+            state.showDegrees = true;
+            dom.toggleDegree.checked = true;
+            dom.oddCountBadge.classList.remove('hidden');
+
+            if (level.canDraw && !userSaysCanDraw) {
+                setFeedback(
+                    'error',
+                    '再觀察看看喔！這個圖形其實「可以一筆畫」！',
+                    `<p>我們已為您在畫布上標示出每個頂點連接的線段數量（度數）：</p>
+                     <p>圖中只有 <strong class="text-emerald-300">${level.oddCount} 個奇數點</strong>（${level.oddCount === 0 ? '全部都是偶數點' : '恰好 2 個奇數點可分別作為起點與終點'}）。</p>
+                     <p class="text-amber-300">請重新點擊上方「可以一筆畫」按鈕進入畫圖階段！</p>`
+                );
+            } else {
+                setFeedback(
+                    'error',
+                    '再數數看喔！這個圖形其實「不可以一筆畫」！',
+                    `<p>我們已為您在畫布上標示出每個頂點連接的線段數量（度數）：</p>
+                     <p>請看粉紅色的頂點，圖中共有 <strong class="text-rose-400">${level.oddCount} 個奇數度頂點</strong>（連接單數條線）。</p>
+                     <p class="text-amber-300">當奇數點超過 2 個時，筆尖一定會在中途卡住。請重新選擇「不可以一筆畫」！</p>`
+                );
+            }
+            drawCanvas();
+        }
+
+        // ==================== 6. 第二階段：Canvas 繪圖與幾何計算 ====================
+        // 將 0~100 的百分比座標轉為畫布像素座標
+        function toCanvasXY(pt) {
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+            const size = Math.min(w, h);
+            const offsetX = (w - size) / 2;
+            const offsetY = (h - size) / 2;
+            return {
+                x: offsetX + (pt[0] / 100) * size,
+                y: offsetY + (pt[1] / 100) * size
+            };
+        }
+
+        // 計算邊的控制點 (Quadratic Bezier Curve)，處理直線與弧線
+        function getEdgeGeometry(level, edge) {
+            const p1 = toCanvasXY(level.vertices[edge.u]);
+            const p2 = toCanvasXY(level.vertices[edge.v]);
+            const mx = (p1.x + p2.x) / 2;
+            const my = (p1.y + p2.y) / 2;
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const curve = edge.curve || 0;
+            // 法向量偏移
+            const cx = mx - dy * curve;
+            const cy = my + dx * curve;
+            // 貝茲曲線在 t=0.5 的中點座標
+            const midX = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x;
+            const midY = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y;
+            return { p1, p2, cx, cy, midX, midY, isCurved: Math.abs(curve) > 0.001 };
+        }
+
+        // 找出目前與指定頂點相連、且尚未走過的邊
+        function getAvailableEdgesFrom(vertexIdx) {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            const list = [];
+            level.edges.forEach((edge, idx) => {
+                if (state.usedEdges.has(idx)) return;
+                if (edge.u === vertexIdx) {
+                    list.push({ edgeIndex: idx, targetVertex: edge.v, edge });
+                } else if (edge.v === vertexIdx) {
+                    list.push({ edgeIndex: idx, targetVertex: edge.u, edge });
+                }
+            });
+            return list;
+        }
+
+        // 執行走一步邊的操作
+        function stepAlongEdge(edgeIndex, nextVertex) {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            if (state.usedEdges.has(edgeIndex)) return;
+
+            const fromVertex = state.currentVertex;
+            state.usedEdges.add(edgeIndex);
+            state.history.push({ from: fromVertex, to: nextVertex, edgeIndex });
+            state.currentVertex = nextVertex;
+
+            dom.edgeProgressBadge.textContent = `${state.usedEdges.size} / ${level.edges.length}`;
+            dom.btnUndoStep.disabled = state.history.length === 0;
+
+            // 檢查是否已經畫完所有邊
+            if (state.usedEdges.size === level.edges.length) {
+                state.isDragging = false;
+                state.pointerPos = null;
+                markCurrentLevelCleared();
+                setFeedback(
+                    'success',
+                    `太棒了！第 ${level.id} 題一筆畫挑戰成功！`,
+                    `<p>您成功不重複、不中斷地走完了全部 <strong>${level.edges.length} 條線段</strong>！</p>
+                     <p class="text-emerald-300 font-bold">下一關已經解鎖，請點擊右下角「下一題」繼續挑戰！</p>`
+                );
+                return;
+            }
+
+            // 檢查是否走入死胡同（還有未走的邊，但當前頂點已經沒有路可走）
+            const remainingMoves = getAvailableEdgesFrom(state.currentVertex);
+            if (remainingMoves.length === 0) {
+                let deadEndHint = '此頂點連接的線段已經全部走完了，但圖上還有其他未完成的線段。';
+                if (level.oddCount === 2 && state.history.length > 0) {
+                    const startV = state.history[0].from;
+                    if (level.degrees[startV] % 2 === 0) {
+                        deadEndHint = `您剛才從<strong>偶數點</strong>出發了！因為本題有 2 個奇數點，必須從<strong>粉紅色的奇數點</strong>作為起點才不會走入死胡同喔！`;
+                    }
+                }
+                setFeedback(
+                    'warning',
+                    '哎呀！走入死胡同了（無路可走）',
+                    `<p>${deadEndHint}</p>
+                     <p class="text-amber-300">請點擊「退回上一步」或「重畫 / 重置本題」再試一次！</p>`
+                );
+            } else {
+                setFeedback(
+                    'info',
+                    '一筆畫進行中...',
+                    `<p>已完成 <strong>${state.usedEdges.size} / ${level.edges.length}</strong> 條線段。目前所在頂點還有 <strong>${remainingMoves.length}</strong> 條路可走。</p>`
+                );
+            }
+
+            drawCanvas();
+        }
+
+        // 根據畫布點擊/拖曳位置處理互動
+        function findNearestVertex(px, py, radiusThreshold) {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            let bestIdx = -1;
+            let bestDist = radiusThreshold;
+            level.vertices.forEach((pt, idx) => {
+                const c = toCanvasXY(pt);
+                const d = Math.hypot(px - c.x, py - c.y);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestIdx = idx;
+                }
+            });
+            return bestIdx;
+        }
+
+        // 當有兩條平行邊連接相同兩個頂點時（如七橋問題），根據游標接近哪一條弧線的中點來決定選哪條邊
+        function pickBestAvailableEdge(targetVertex, px, py) {
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            const candidates = getAvailableEdgesFrom(state.currentVertex).filter(
+                item => item.targetVertex === targetVertex
+            );
+            if (candidates.length === 0) return null;
+            if (candidates.length === 1) return candidates[0];
+
+            // 若有多條平行邊，挑選弧線中點離游標最近的一條
+            let best = candidates[0];
+            let minDist = Infinity;
+            candidates.forEach(cand => {
+                const geom = getEdgeGeometry(level, cand.edge);
+                const d = Math.hypot(px - geom.midX, py - geom.midY);
+                if (d < minDist) {
+                    minDist = d;
+                    best = cand;
+                }
+            });
+            return best;
+        }
+
+        // 也可直接滑過弧線中點觸發（特別方便平行弧線或長邊）
+        function findHoveredEdgeCandidate(px, py, threshold) {
+            if (state.currentVertex === null) return null;
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            const candidates = getAvailableEdgesFrom(state.currentVertex);
+            let best = null;
+            let minDist = threshold;
+            candidates.forEach(cand => {
+                const geom = getEdgeGeometry(level, cand.edge);
+                const d = Math.hypot(px - geom.midX, py - geom.midY);
+                if (d < minDist) {
+                    minDist = d;
+                    best = cand;
+                }
+            });
+            return best;
+        }
+
+        // 取得游標在 Canvas 內的座標
+        function getPointerCanvasPos(evt) {
+            const rect = dom.canvas.getBoundingClientRect();
+            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+            return {
+                x: (clientX - rect.left) * (dom.canvas.width / rect.width),
+                y: (clientY - rect.top) * (dom.canvas.height / rect.height)
+            };
+        }
+
+        function onPointerDown(evt) {
+            if (state.phase !== 'DRAW') return;
+            evt.preventDefault();
+            const pos = getPointerCanvasPos(evt);
+            state.isDragging = true;
+            state.pointerPos = pos;
+
+            const hitRadius = Math.max(24, dom.canvas.width * 0.055);
+            const vIdx = findNearestVertex(pos.x, pos.y, hitRadius);
+
+            if (state.currentVertex === null) {
+                // 尚未選擇起點 -> 設定起點
+                if (vIdx !== -1) {
+                    state.currentVertex = vIdx;
+                    const level = ALL_LEVELS[state.currentLevelIndex];
+                    if (level.oddCount === 2 && level.degrees[vIdx] % 2 === 0) {
+                        setFeedback(
+                            'warning',
+                            '起點小提醒：您選了偶數點作為起點',
+                            `<p>此圖形有 2 個奇數點，從偶數點出發最後一定會卡住喔！建議點擊「重畫」並改從<strong>奇數點（連接單數條線的點）</strong>出發。</p>`
+                        );
+                    } else {
+                        setFeedback(
+                            'info',
+                            '已設定起點！請開始一筆畫連線',
+                            `<p>請拖曳滑鼠/手指，或直接點擊高亮閃爍的相鄰頂點來畫線。</p>`
+                        );
+                    }
+                    drawCanvas();
+                }
+            } else {
+                // 已有當前頂點，檢查是否點擊了相鄰可走的頂點
+                if (vIdx !== -1 && vIdx !== state.currentVertex) {
+                    const chosen = pickBestAvailableEdge(vIdx, pos.x, pos.y);
+                    if (chosen) {
+                        stepAlongEdge(chosen.edgeIndex, chosen.targetVertex);
+                        return;
+                    }
+                }
+                // 或檢查是否點擊了某條可用邊的中點
+                const edgeCand = findHoveredEdgeCandidate(pos.x, pos.y, hitRadius * 0.85);
+                if (edgeCand) {
+                    stepAlongEdge(edgeCand.edgeIndex, edgeCand.targetVertex);
+                }
+            }
+            drawCanvas();
+        }
+
+        function onPointerMove(evt) {
+            if (state.phase !== 'DRAW' || !state.isDragging) return;
+            evt.preventDefault();
+            const pos = getPointerCanvasPos(evt);
+            state.pointerPos = pos;
+
+            const hitRadius = Math.max(22, dom.canvas.width * 0.048);
+
+            if (state.currentVertex === null) {
+                const vIdx = findNearestVertex(pos.x, pos.y, hitRadius);
+                if (vIdx !== -1) {
+                    state.currentVertex = vIdx;
+                }
+            } else {
+                const vIdx = findNearestVertex(pos.x, pos.y, hitRadius);
+                if (vIdx !== -1 && vIdx !== state.currentVertex) {
+                    const chosen = pickBestAvailableEdge(vIdx, pos.x, pos.y);
+                    if (chosen) {
+                        stepAlongEdge(chosen.edgeIndex, chosen.targetVertex);
+                    }
+                }
+            }
+            drawCanvas();
+        }
+
+        function onPointerUp() {
+            if (!state.isDragging) return;
+            state.isDragging = false;
+            state.pointerPos = null;
+            drawCanvas();
+        }
+
+        // ==================== 7. Canvas 視覺渲染引擎 ====================
+        function resizeCanvas() {
+            const container = dom.canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            dom.canvas.width = Math.floor(rect.width * dpr);
+            dom.canvas.height = Math.floor(rect.height * dpr);
+            drawCanvas();
+        }
+
+        function drawCanvas() {
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+            if (w === 0 || h === 0) return;
+
+            ctx.clearRect(0, 0, w, h);
+            const level = ALL_LEVELS[state.currentLevelIndex];
+            const scale = Math.min(w, h) / 500;
+
+            // 找出當前頂點可走的相鄰邊與頂點
+            const availableMoves = state.currentVertex !== null && state.phase === 'DRAW'
+                ? getAvailableEdgesFrom(state.currentVertex)
+                : [];
+            const availableEdgeSet = new Set(availableMoves.map(m => m.edgeIndex));
+            const availableVertexSet = new Set(availableMoves.map(m => m.targetVertex));
+
+            // 1. 繪製所有未走過的邊與已走過的邊
+            level.edges.forEach((edge, idx) => {
+                const geom = getEdgeGeometry(level, edge);
+                const isUsed = state.usedEdges.has(idx);
+                const isAvailable = availableEdgeSet.has(idx);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(geom.p1.x, geom.p1.y);
+                if (geom.isCurved) {
+                    ctx.quadraticCurveTo(geom.cx, geom.cy, geom.p2.x, geom.p2.y);
+                } else {
+                    ctx.lineTo(geom.p2.x, geom.p2.y);
+                }
+
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (isUsed) {
+                    // 已走過的邊：翠綠發光線條
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = Math.max(5, 9 * scale);
+                    ctx.shadowColor = 'rgba(16, 185, 129, 0.55)';
+                    ctx.shadowBlur = 12 * scale;
+                    ctx.stroke();
+                } else if (isAvailable) {
+                    // 當前可走的相鄰邊：淡青色高亮虛線提示
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = Math.max(4, 7 * scale);
+                    ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+                    ctx.shadowBlur = 8 * scale;
+                    ctx.stroke();
+                } else {
+                    // 尚未走過的一般邊
+                    ctx.strokeStyle = '#475569';
+                    ctx.lineWidth = Math.max(3.5, 6.5 * scale);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            // 2. 若正在拖曳中，繪製從當前頂點到游標的橡皮筋引導線
+            if (state.phase === 'DRAW' && state.isDragging && state.currentVertex !== null && state.pointerPos) {
+                const startPt = toCanvasXY(level.vertices[state.currentVertex]);
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(startPt.x, startPt.y);
+                ctx.lineTo(state.pointerPos.x, state.pointerPos.y);
+                ctx.setLineDash([6 * scale, 6 * scale]);
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = Math.max(2.5, 4 * scale);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3. 繪製已走過路徑的順序編號或方向小點（幫助學生看清路徑）
+            state.history.forEach((step, stepIdx) => {
+                const edge = level.edges[step.edgeIndex];
+                const geom = getEdgeGeometry(level, edge);
+                ctx.save();
+                ctx.fillStyle = '#064e3b';
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 1.5 * scale;
+                ctx.beginPath();
+                ctx.arc(geom.midX, geom.midY, Math.max(7, 9.5 * scale), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ecfdf5';
+                ctx.font = `bold ${Math.max(9, Math.round(10 * scale))}px "Noto Sans TC", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(String(stepIdx + 1), geom.midX, geom.midY);
+                ctx.restore();
+            });
+
+            // 4. 繪製所有頂點
+            const baseRadius = level.vertices.length > 15 ? 10.5 * scale : 13 * scale;
+            const vRadius = Math.max(8, baseRadius);
+
+            level.vertices.forEach((pt, idx) => {
+                const c = toCanvasXY(pt);
+                const deg = level.degrees[idx];
+                const isOdd = deg % 2 === 1;
+                const isCurrent = state.currentVertex === idx;
+                const isAvailableTarget = availableVertexSet.has(idx);
+
+                ctx.save();
+
+                // 若為當前筆尖所在頂點，畫外圈呼吸光環
+                if (isCurrent) {
+                    const pulseR = vRadius + (6 + Math.sin(state.pulseTick * 0.12) * 3) * scale;
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, pulseR, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.28)';
+                    ctx.fill();
+                    ctx.lineWidth = 2 * scale;
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.stroke();
+                } else if (isAvailableTarget) {
+                    // 可前往的相鄰頂點光環
+                    const pulseR = vRadius + 4 * scale;
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, pulseR, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+                    ctx.lineWidth = 2 * scale;
+                    ctx.stroke();
+                }
+
+                // 頂點本體圓圈
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, vRadius, 0, Math.PI * 2);
+
+                if (isCurrent) {
+                    ctx.fillStyle = '#fbbf24'; // 琥珀黃筆尖
+                    ctx.strokeStyle = '#ffffff';
+                } else if (state.showDegrees || state.phase !== 'JUDGE') {
+                    // 當開啟度數顯示或進入第二階段時，奇數點顯示為醒目玫瑰紅，偶數點顯示為淺灰藍
+                    if (isOdd) {
+                        ctx.fillStyle = '#f43f5e';
+                        ctx.strokeStyle = '#fecdd3';
+                    } else {
+                        ctx.fillStyle = '#e2e8f0';
+                        ctx.strokeStyle = '#475569';
+                    }
+                } else {
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.strokeStyle = '#64748b';
+                }
+
+                ctx.lineWidth = Math.max(2, 2.5 * scale);
+                ctx.fill();
+                ctx.stroke();
+
+                // 頂點內部文字：若開啟「顯示頂點度數」，則顯示度數數字
+                if (state.showDegrees) {
+                    ctx.fillStyle = (isCurrent || (!isOdd)) ? '#0f172a' : '#ffffff';
+                    ctx.font = `900 ${Math.max(10, Math.round(11.5 * scale))}px "Noto Sans TC", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(String(deg), c.x, c.y + 0.5);
+                }
+
+                ctx.restore();
+            });
+        }
+
+        // 動畫循環（讓當前頂點與提示環有柔和呼吸效果）
+        function animateLoop() {
+            state.pulseTick++;
+            if (state.phase === 'DRAW') {
+                drawCanvas();
+            }
+            requestAnimationFrame(animateLoop);
+        }
+
+        // ==================== 8. 關卡選擇器彈窗渲染 ====================
+        function renderLevelsGrid() {
+            dom.levelsGrid.innerHTML = '';
+            ALL_LEVELS.forEach((lvl, idx) => {
+                const isCleared = state.clearedLevels.has(idx);
+                const isUnlocked = idx <= state.maxUnlockedIndex;
+                const isCurrent = idx === state.currentLevelIndex;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+
+                let cls = 'h-12 rounded-xl font-black text-xs sm:text-sm flex flex-col items-center justify-center transition border ';
+                if (isCurrent) {
+                    cls += 'bg-amber-500 text-slate-950 border-amber-300 ring-2 ring-amber-400/50 shadow-lg';
+                } else if (isCleared) {
+                    cls += 'bg-emerald-600/90 hover:bg-emerald-500 text-white border-emerald-400/40 shadow';
+                } else if (isUnlocked) {
+                    cls += 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400/40';
+                } else {
+                    cls += 'bg-slate-900/70 text-slate-600 border-slate-800 cursor-not-allowed opacity-60';
+                }
+                btn.className = cls;
+                btn.disabled = !isUnlocked;
+
+                if (isUnlocked) {
+                    btn.innerHTML = `
+                        <span>${lvl.id}</span>
+                        <span class="text-[10px] font-normal">${isCleared ? '<i class="fa-solid fa-check"></i>' : '挑戰中'}</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        loadLevel(idx);
+                        dom.modalLevels.classList.add('hidden');
+                        dom.modalLevels.classList.remove('flex');
+                    });
+                } else {
+                    btn.innerHTML = `
+                        <span>${lvl.id}</span>
+                        <i class="fa-solid fa-lock text-[10px]"></i>
+                    `;
+                }
+
+                dom.levelsGrid.appendChild(btn);
+            });
+        }
+
+        // ==================== 9. 事件綁定與初始化 ====================
+        function bindEvents() {
+            // 第一階段判斷按鈕
+            dom.btnJudgeYes.addEventListener('click', () => handleJudgeAnswer(true));
+            dom.btnJudgeNo.addEventListener('click', () => handleJudgeAnswer(false));
+
+            // 第一階段提示按鈕
+            dom.btnHintPhase1.addEventListener('click', () => {
+                state.showDegrees = true;
+                dom.toggleDegree.checked = true;
+                const level = ALL_LEVELS[state.currentLevelIndex];
+                dom.oddCountBadge.classList.remove('hidden');
+                setFeedback(
+                    'warning',
+                    '頂點度數提示已開啟！',
+                    `<p>畫布上的圓點已經標示出連接的線段數量（粉紅色代表<strong>奇數點</strong>，白色代表<strong>偶數點</strong>）。</p>
+                     <p>本題共有 <strong class="text-rose-400">${level.oddCount} 個奇數點</strong>。請回想：奇數點為 0 或 2 個時可以一筆畫，超過 2 個時不可以一筆畫！</p>`
+                );
+                drawCanvas();
+            });
+
+            // 切換顯示頂點度數開關
+            dom.toggleDegree.addEventListener('change', (e) => {
+                state.showDegrees = e.target.checked;
+                dom.oddCountBadge.classList.toggle('hidden', !state.showDegrees && state.phase === 'JUDGE');
+                drawCanvas();
+            });
+
+            // 第二階段：退回上一步
+            dom.btnUndoStep.addEventListener('click', () => {
+                if (state.history.length === 0) return;
+                const last = state.history.pop();
+                state.usedEdges.delete(last.edgeIndex);
+                state.currentVertex = state.history.length > 0 ? state.history[state.history.length - 1].to : last.from;
+                const level = ALL_LEVELS[state.currentLevelIndex];
+                dom.edgeProgressBadge.textContent = `${state.usedEdges.size} / ${level.edges.length}`;
+                dom.btnUndoStep.disabled = state.history.length === 0;
+                setFeedback('info', '已退回上一步', '請選擇其他分支路線繼續一筆畫。');
+                drawCanvas();
+            });
+
+            // 第二階段：重畫 / 重置本題
+            dom.btnResetDraw.addEventListener('click', () => {
+                state.currentVertex = null;
+                state.usedEdges.clear();
+                state.history = [];
+                state.isDragging = false;
+                state.pointerPos = null;
+                const level = ALL_LEVELS[state.currentLevelIndex];
+                dom.edgeProgressBadge.textContent = `0 / ${level.edges.length}`;
+                dom.btnUndoStep.disabled = true;
+                setFeedback('info', '已重置畫布', '請重新點擊一個頂點作為起點，再試一次！');
+                drawCanvas();
+            });
+
+            // 上一題 / 下一題導覽
+            dom.btnPrevLevel.addEventListener('click', () => {
+                if (state.currentLevelIndex > 0) {
+                    loadLevel(state.currentLevelIndex - 1);
+                }
+            });
+            dom.btnNextLevel.addEventListener('click', () => {
+                if (state.clearedLevels.has(state.currentLevelIndex) && state.currentLevelIndex < ALL_LEVELS.length - 1) {
+                    loadLevel(state.currentLevelIndex + 1);
+                }
+            });
+
+            // 畫布滑鼠與觸控事件
+            dom.canvas.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            dom.canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+
+            // 彈窗開關：關卡列表
+            const openLevelsModal = () => {
+                renderLevelsGrid();
+                dom.modalLevels.classList.remove('hidden');
+                dom.modalLevels.classList.add('flex');
+            };
+            const closeLevelsModal = () => {
+                dom.modalLevels.classList.add('hidden');
+                dom.modalLevels.classList.remove('flex');
+            };
+            document.getElementById('btn-levels').addEventListener('click', openLevelsModal);
+            document.getElementById('btn-close-levels').addEventListener('click', closeLevelsModal);
+            document.getElementById('btn-close-levels-bottom').addEventListener('click', closeLevelsModal);
+
+            // 彈窗開關：數學原理小教室
+            const openTheoryModal = () => {
+                dom.modalTheory.classList.remove('hidden');
+                dom.modalTheory.classList.add('flex');
+            };
+            const closeTheoryModal = () => {
+                dom.modalTheory.classList.add('hidden');
+                dom.modalTheory.classList.remove('flex');
+            };
+            document.getElementById('btn-theory').addEventListener('click', openTheoryModal);
+            document.getElementById('btn-close-theory').addEventListener('click', closeTheoryModal);
+            document.getElementById('btn-close-theory-bottom').addEventListener('click', closeTheoryModal);
+
+            // 重置所有進度確認彈窗
+            document.getElementById('btn-reset-all-progress').addEventListener('click', () => {
+                dom.modalConfirmReset.classList.remove('hidden');
+                dom.modalConfirmReset.classList.add('flex');
+            });
+            document.getElementById('btn-cancel-reset').addEventListener('click', () => {
+                dom.modalConfirmReset.classList.add('hidden');
+                dom.modalConfirmReset.classList.remove('flex');
+            });
+            document.getElementById('btn-confirm-reset').addEventListener('click', () => {
+                state.clearedLevels.clear();
+                state.maxUnlockedIndex = 0;
+                state.currentLevelIndex = 0;
+                saveProgress();
+                dom.modalConfirmReset.classList.add('hidden');
+                dom.modalConfirmReset.classList.remove('flex');
+                closeLevelsModal();
+                loadLevel(0);
+            });
+
+            // 視窗縮放自適應
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        // 啟動遊戲
+        window.onload = function () {
+            loadProgress();
+            bindEvents();
+            resizeCanvas();
+            loadLevel(state.currentLevelIndex);
+            animateLoop();
+        };
+    </script>
+</body>
+</html>
